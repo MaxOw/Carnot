@@ -1,0 +1,11 @@
+dist
+deps
+result
+ignore
+*.ignore
+*.[ao]
+*.hi
+imgs
+fonts
+Temp.hs
+Trash.hs

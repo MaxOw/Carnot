@@ -1,0 +1,105 @@
+Name          : Carnot
+Version       : 0.1.0.2
+License       : BSD3
+-- License-File  : LICENSE
+Author        : Maksymilian Owsianny
+Maintainer    : Maksymilian.Owsianny@gmail.com
+Homepage      : https//github.com/MaxOw/Carnot
+Bug-Reports   : https//github.com/MaxOw/Carnot/issues
+Build-Type    : Simple
+Cabal-Version : >= 1.18
+
+Source-Repository head
+  type:     git
+  location: https://github.com/MaxOw/Carnot.git
+
+-- library
+executable Carnot
+  default-language: Haskell2010
+  hs-source-dirs:   src, example
+  main-is:          Main.hs
+  ghc-options:
+    -O2
+    -Wall
+    -fno-warn-missing-pattern-synonym-signatures
+    -Werror=missing-fields
+    -Werror=incomplete-patterns
+
+  default-extensions:
+      NoImplicitPrelude
+    , DoAndIfThenElse
+    , LambdaCase
+    , MultiWayIf
+    , TupleSections
+    , OverloadedStrings
+    , PatternSynonyms
+
+    , TypeOperators
+    , TypeApplications
+    , TypeSynonymInstances
+    , FlexibleInstances
+    , FlexibleContexts
+    , MultiParamTypeClasses
+    , FunctionalDependencies
+
+    , DeriveGeneric
+    , DeriveFunctor
+    , DeriveTraversable
+    , DeriveFoldable
+    , GeneralizedNewtypeDeriving
+
+    , BangPatterns
+
+  exposed-modules:
+        Engine
+        Engine.Loop
+        Engine.Types
+        Engine.Events
+        Engine.Events.Types
+        Engine.Graphics
+        Engine.Graphics.Utils
+        Engine.Graphics.Types
+        -- Engine.Graphics.Draw
+        Engine.Graphics.Draw.Shape
+        Engine.Graphics.Draw.Texture
+        Engine.Context
+
+  other-modules:
+        Main
+
+  build-depends : base >= 4.5 && < 5.0
+                , stm
+                , mtl
+                , array
+                , vector
+                , containers
+                , unordered-containers
+                , deepseq
+                , relude
+                , protolude
+                , directory
+                , template-haskell
+                , bytestring
+                , split
+
+                , lens
+                , data-default
+                , linear
+                , boundingboxes
+
+                , diagrams-core
+                , diagrams-lib
+                , colour
+
+                , gl
+                , GLFW-b
+                , JuicyPixels
+                , freetype2
+                , FTGL
+                , freetype-simple
+
+                , criterion
+                , weigh
+
+                -- , halive
+
