@@ -24,10 +24,10 @@ import Engine.Common.Types
 
 --------------------------------------------------------------------------------
 
-type Vec2 = V2 Double
-type Vec3 = V3 Double
-type Vec4 = V4 Double
-type Mat4 = M44 Double
+type Vec2 = V2 Float
+type Vec3 = V3 Float
+type Vec4 = V4 Float
+type Mat4 = M44 Float
 
 type Color = Colour Float
 type AlphaColor = AlphaColour Float
@@ -75,7 +75,7 @@ instance Default ShapeDesc where
         , shapeDesc_modelTransform = mempty -- Linear.identity
         , shapeDesc_zindex         = 0
         }
-type instance N ShapeDesc = Double
+type instance N ShapeDesc = Float
 type instance V ShapeDesc = V2
 instance Transformable ShapeDesc where
     transform t = over modelTransform (t <>)
@@ -93,14 +93,14 @@ instance Default TextureDesc where
         { textureDesc_textureId      = 0 -- noTexture
         , textureDesc_modelTransform = mempty
         }
-type instance N TextureDesc = Double
+type instance N TextureDesc = Float
 type instance V TextureDesc = V2
 instance Transformable TextureDesc where
     transform t = over modelTransform (t <>)
 -}
 
 class BoundingPoints a where
-    boundingPoints :: a -> [V2 Double]
+    boundingPoints :: a -> [V2 Float]
 
 data AtlasDesc = AtlasDesc
    { atlasDesc_textureId      :: Maybe Texture
@@ -124,7 +124,7 @@ instance Default AtlasDesc where
         , atlasDesc_part           = Nothing -- unitRect
         , atlasDesc_customPage     = Nothing
         }
-type instance N AtlasDesc = Double
+type instance N AtlasDesc = Float
 type instance V AtlasDesc = V2
 instance Transformable AtlasDesc where
     transform t = over modelTransform (t <>)
@@ -172,7 +172,7 @@ instance Monoid RenderAction where
     mconcat = RenderComposition mempty
 
 type instance V RenderAction = V2
-type instance N RenderAction = Double
+type instance N RenderAction = Float
 
 instance Transformable RenderAction where
     transform t = \case
@@ -217,7 +217,7 @@ pattern Both   = OrthoNorm_Both
 data OrthoProjectionOpts = OrthoProjectionOpts
    { orthoProjectionOpts_boxAlign      :: BoxAlign
    , orthoProjectionOpts_normalization :: Maybe OrthoNorm
-   , orthoProjectionOpts_scale         :: Double
+   , orthoProjectionOpts_scale         :: Float
    }
 makeFieldsCustom ''OrthoProjectionOpts
 instance Default OrthoProjectionOpts where

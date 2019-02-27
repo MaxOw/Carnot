@@ -173,7 +173,7 @@ class Uniform a where
 instance Uniform Mat4 where
     setUniform = setUniformMatrix
 
-instance Uniform Vec4 where
+instance Uniform (V4 Double) where
     setUniform program name vec = do
         loc <- getUniformLocation program name
         let V4 x y z w = fmap realToFrac vec

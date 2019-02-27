@@ -8,12 +8,12 @@ import Linear
 
 --------------------------------------------------------------------------------
 
-type Percent = Double
-type AbsoluteSize = Double -- Size in pixels?
--- newtype AbsoluteSize = AbsoluteSize { sizeInPixels :: Double }
--- newtype Percent      = Percent Double
+type Percent = Float
+type AbsoluteSize = Float -- Size in pixels?
+-- newtype AbsoluteSize = AbsoluteSize { sizeInPixels :: Float }
+-- newtype Percent      = Percent Float
 
-type FillPart = Double
+type FillPart = Float
 
 data Sizing
    = Sizing_ContainerPct Percent      -- [0-1] = Percent of container size

@@ -28,7 +28,7 @@ data Event -- With ue
    | EventMouseButton     MouseButton MouseButtonState ModifierKeys
    | EventCursorPos       Float Float
 -- | EventCursorEnter     CursorState
-   | EventScroll          Double Double
+   | EventScroll          Float Float
    | EventKey             Key Int KeyState ModifierKeys
    | EventChar            Char
 -- | EventUser            ue

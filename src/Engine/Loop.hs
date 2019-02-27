@@ -80,7 +80,7 @@ incrementalUpdates timesUp = do
     atlas <- use $ graphics.textureAtlas
     Atlas.incrementalUpdate atlas timesUp
 
-threadDelaySeconds :: MonadIO m => Double -> m ()
+threadDelaySeconds :: MonadIO m => Float -> m ()
 threadDelaySeconds = liftIO . threadDelay . floor . (1e6*)
 
 closeWindow :: Engine us ()

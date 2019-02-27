@@ -38,9 +38,11 @@ initEvents win mq = do
     fire3 setMouseButtonCallback     EventMouseButton
  -- fire2 setCursorPosCallback       EventCursorPos
  -- fire1 setCursorEnterCallback     EventCursorEnter
-    fire2 setScrollCallback          EventScroll
     fire4 setKeyCallback             EventKey
     fire1 setCharCallback            EventChar
+
+    setScrollCallback win $ Just $ \_ x y ->
+        fire $ EventScroll (realToFrac x) (realToFrac y)
 
     setCursorPosCallback win $ Just $ \_ x y ->
         fire $ EventCursorPos (realToFrac x) (realToFrac y)

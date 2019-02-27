@@ -20,8 +20,8 @@ import System.IO (stdout, hPutStrLn)
 
 type Context = GLFW.Window
 
-getTime :: MonadIO m => m Double
-getTime = fromJust <$> liftIO GLFW.getTime
+getTime :: MonadIO m => m Float
+getTime = realToFrac . fromJust <$> liftIO GLFW.getTime
 
 initWindow :: String -> (Int, Int) -> IO Context
 initWindow title (winWidth, winHeight) = do
@@ -71,7 +71,7 @@ getPrimaryDPI = do
         (w, _) <- liftIO $ GLFW.getMonitorPhysicalSize prim
         let modeWidth = fromIntegral $ GLFW.videoModeWidth mode
         let widthMM = fromIntegral w
-        let mmToInch = (/(25.4 :: Double))
+        let mmToInch = (/(25.4 :: Float))
         let widthInch = mmToInch widthMM
         return $ Just $ floor $ (modeWidth/widthInch)
 

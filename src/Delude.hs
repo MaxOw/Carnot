@@ -41,7 +41,7 @@ import GHC.Stack (SrcLoc(..))
 splitWhenKeep :: (a -> Bool) -> [a] -> [[a]]
 splitWhenKeep = split . whenElt
 
-type T2D = T2 Double
+type T2D = T2 Float
 
 {-# NOINLINE logRef #-}
 logRef :: IORef (Set String)

@@ -9,8 +9,8 @@ import Control.Lens          (makeLenses)
 import Engine.Events.Types   (Event, EventQueue)
 import Engine.Graphics.Types (GraphicsState)
 
--- type Time  = Double
-type Delta = Double
+-- type Time  = Float
+type Delta = Float
 
 -- type Engine us a = ReaderT (EngineState us) IO a
 type Engine us a = StateT  (EngineState us) IO a

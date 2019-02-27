@@ -177,12 +177,12 @@ makeDrawCharStep fs char = do
         }
 
 -- type Points = Int
--- type Pixels = Double
+-- type Pixels = Float
 
-pointsToPixels :: Int -> Double
+pointsToPixels :: Int -> Float
 pointsToPixels = (/64) . fromIntegral
 
-pixelsToPoints :: Double -> Int
+pixelsToPoints :: Float -> Int
 pixelsToPoints = floor . (*64)
 
 {-
@@ -537,7 +537,7 @@ renderFromAtlas = RenderFromAtlas
 renderComposition :: [RenderAction] -> RenderAction
 renderComposition = RenderComposition mempty
 
-renderActionBBox :: RenderAction -> Maybe (BBox Double)
+renderActionBBox :: RenderAction -> Maybe (BBox Float)
 renderActionBBox x = viaNonEmpty bboxUnion
     $ mapMaybe (uncurry transformBBox) $ go mempty x []
     where
