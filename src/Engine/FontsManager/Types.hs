@@ -5,7 +5,6 @@
 module Engine.FontsManager.Types where
 
 import Delude
-import Linear
 
 import Graphics.Rendering.FreeType.Internal.PrimitiveTypes
 import Graphics.Rendering.FreeType.Internal.Face (FT_Face)
@@ -105,10 +104,11 @@ makeFieldsCustom ''FontMetrics
 --------------------------------------------------------------------------------
 
 data FontsManager = FontsManager
-   { fontsManager_ftLib        :: FT_Library
-   , fontsManager_deviceDPI    :: DPI
-   , fontsManager_fontsMap     :: TVar (HashMap FontName Font)
-   , fontsManager_familiesMap  :: TVar (HashMap FontFamilyName FontFamily)
+   { fontsManager_ftLib          :: FT_Library
+   , fontsManager_deviceDPI      :: DPI
+   , fontsManager_fontsMap       :: TVar (HashMap FontName Font)
+   , fontsManager_familiesMap    :: TVar (HashMap FontFamilyName FontFamily)
+   , fontsManager_hierarchiesMap :: TMVar (HashMap [FontFamilyName] FontHierarchy)
    }
 makeFieldsCustom ''FontsManager
 

@@ -1,10 +1,10 @@
 {-# Language TemplateHaskell #-}
+{-# Language TypeFamilies #-}
 {-# Language StrictData #-}
 {-# Language BangPatterns #-}
 module Engine.Graphics.TextureAtlas.Types where
 
 import Delude
-import Linear
 import Data.Vector (Vector)
 import Data.HashMap.Strict (HashMap)
 import Data.IORef (IORef)
@@ -54,7 +54,7 @@ data AtlasLocation = AtlasLocation
    { atlasLocation_page      :: Int
    , atlasLocation_offset    :: V2 Int
    , atlasLocation_size      :: V2 Int
-   , atlasLocation_texCoords :: [V2 Float]
+   -- , atlasLocation_texCoords :: Rect Float -- [V2 Float]
    } deriving (Show)
 makeFieldsCustom ''AtlasLocation
 
@@ -63,7 +63,7 @@ emptyAtlasLocation = AtlasLocation
     { atlasLocation_page      = 0
     , atlasLocation_offset    = 0
     , atlasLocation_size      = 0
-    , atlasLocation_texCoords = []
+    -- , atlasLocation_texCoords = unitRect
     }
 
 data AtlasTask
@@ -74,10 +74,14 @@ data TextureAtlas  = TextureAtlas
    , textureAtlas_maxTextureSize  :: GLint
    , textureAtlas_atlasMap        :: IORef (HashMap Texture AtlasLocation)
    , textureAtlas_primaryPages    :: IORef AtlasPages
-   , textureAtlas_secondaryPages  :: IORef AtlasPages
+   -- , textureAtlas_secondaryPages  :: IORef AtlasPages
+   , textureAtlas_customPages     :: IORef (Vector TextureBuffer)
    , textureAtlas_tasks           :: TChan AtlasTask
    }
 makeFieldsCustom ''TextureAtlas
+
+newtype PageId = PageId { unPageId :: Int }
+makeWrapped ''PageId
 
 --------------------------------------------------------------------------------
 

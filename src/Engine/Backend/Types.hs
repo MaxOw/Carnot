@@ -2,7 +2,6 @@
 module Engine.Backend.Types where
 
 import Delude
-import Linear
 import Foreign (Ptr)
 import Graphics.GL (GLuint, GLint, GLsizeiptr)
 
@@ -20,6 +19,10 @@ type AttribLocation  = GLint
 type BufferData = (GLsizeiptr, Ptr ())
 
 --------------------------------------------------------------------------------
+
+noTexture :: Texture
+noTexture = 0
+
 
 data TextureBuffer = TextureBuffer
    { textureBuffer_framebuffer :: Framebuffer

@@ -1,5 +1,5 @@
 Name          : Carnot
-Version       : 0.1.0.2
+Version       : 0.1.12.0
 License       : BSD3
 -- License-File  : LICENSE
 Author        : Maksymilian Owsianny
@@ -13,14 +13,20 @@ Source-Repository head
   type:     git
   location: https://github.com/MaxOw/Carnot.git
 
--- library
-executable Carnot
+flag build-example
+  description: Build the example executable.
+  default: False
+
+library
+-- executable Carnot
   default-language: Haskell2010
-  hs-source-dirs:   src, example
-  main-is:          Main.hs
+  hs-source-dirs:   src
+  -- hs-source-dirs:   src, example
+  -- main-is:          Main.hs
   ghc-options:
     -O2
     -Wall
+    -fdiagnostics-color=always
     -fno-warn-missing-pattern-synonym-signatures
     -Werror=missing-fields
     -Werror=incomplete-patterns
@@ -52,26 +58,68 @@ executable Carnot
 
   exposed-modules:
         Engine
+        Engine.TH
         Engine.Loop
         Engine.Types
+        Engine.Backend.Types
+        Engine.Common.Types
+        Engine.FontsManager
+        Engine.FontsManager.FreeTypeError
+        Engine.FontsManager.Types
+        Engine.FontsManager.Utils
         Engine.Events
         Engine.Events.Types
         Engine.Graphics
+        Engine.Graphics.Buffer
+        Engine.Graphics.Buffer.Types
         Engine.Graphics.Utils
         Engine.Graphics.Types
         -- Engine.Graphics.Draw
-        Engine.Graphics.Draw.Shape
-        Engine.Graphics.Draw.Texture
+        -- Engine.Graphics.Draw.Shape
+        Engine.Graphics.TextureAtlas
+        Engine.Graphics.TextureAtlas.Types
+        Engine.Graphics.Scroller
+        Engine.Graphics.Scroller.Types
+        Engine.Graphics.Draw.Atlas
+        -- Engine.Graphics.Draw.Texture
+        Engine.KDTree
+        Engine.KDTree.Types
+        Engine.Layout.Render
+        Engine.Layout.Types
         Engine.Context
 
+        Engine.HasField
+        Engine.HasPattern
+
+        Data.GridIndex
+        Data.GridIndex.Types
+        Data.QuadTree
+        Data.QuadTree.Types
+        Data.SpatialIndex
+        Data.SpatialIndex.Types
+        Data.VectorIndex
+        Data.VectorIndex.Types
+        Data.FullMap
+
+        Data.Collider
+        Data.Collider.Types
+
+        Benchmarks
+        Benchmarks.GridIndex
+        Benchmarks.KDTree
+
+        Tests.Utils
+
   other-modules:
-        Main
+        Delude
+        -- Main
 
   build-depends : base >= 4.5 && < 5.0
                 , stm
                 , mtl
                 , array
                 , vector
+                , vector-algorithms
                 , containers
                 , unordered-containers
                 , deepseq
@@ -81,6 +129,8 @@ executable Carnot
                 , template-haskell
                 , bytestring
                 , split
+                , derive-storable
+                , quickselect
 
                 , lens
                 , data-default
@@ -96,10 +146,128 @@ executable Carnot
                 , JuicyPixels
                 , freetype2
                 , FTGL
-                , freetype-simple
+                -- , freetype-simple
 
                 , criterion
                 , weigh
 
-                -- , halive
+                , tasty
+                , tasty-hunit
+                , tasty-golden
+                , tasty-smallcheck
+                , tasty-quickcheck
+                , HUnit
+                , smallcheck
+                , QuickCheck
+                , tree-diff
 
+                , reload-utils
+
+
+executable Carnot
+  if !flag(build-example)
+    buildable:      False
+  default-language: Haskell2010
+  hs-source-dirs:   src
+  main-is:          Main.hs
+  ghc-options:
+    -O2
+    -Wall
+    -fdiagnostics-color=always
+    -fno-warn-missing-pattern-synonym-signatures
+    -fno-warn-missing-home-modules
+    -Werror=missing-fields
+    -Werror=incomplete-patterns
+
+  default-extensions:
+      NoImplicitPrelude
+    , DoAndIfThenElse
+    , LambdaCase
+    , MultiWayIf
+    , TupleSections
+    , OverloadedStrings
+    , PatternSynonyms
+
+    , TypeOperators
+    , TypeApplications
+    , TypeSynonymInstances
+    , FlexibleInstances
+    , FlexibleContexts
+    , MultiParamTypeClasses
+    , FunctionalDependencies
+
+    , DeriveGeneric
+    , DeriveFunctor
+    , DeriveTraversable
+    , DeriveFoldable
+    , GeneralizedNewtypeDeriving
+
+    , BangPatterns
+
+  build-depends : base >= 4.5 && < 5.0
+                , stm
+                , mtl
+                , array
+                , vector
+                , containers
+                , unordered-containers
+                , deepseq
+                , relude
+                , protolude
+                , directory
+                , template-haskell
+                , bytestring
+                , split
+                , derive-storable
+                , quickselect
+
+                , Carnot
+
+                , lens
+                , data-default
+                , linear
+                , boundingboxes
+
+                , diagrams-core
+                , diagrams-lib
+                , colour
+
+                , gl
+                , GLFW-b
+                , JuicyPixels
+                , freetype2
+                , FTGL
+                -- , freetype-simple
+
+                , criterion
+                , weigh
+
+                , reload-utils
+
+                , tasty
+                , tasty-hunit
+                , tasty-golden
+                , tasty-smallcheck
+                , tasty-quickcheck
+                , HUnit
+                , smallcheck
+                , QuickCheck
+                , tree-diff
+
+
+executable benchmark
+  buildable:        False
+  default-language: Haskell2010
+  hs-source-dirs:   benchmarks
+  main-is:          Main.hs
+  ghc-options:
+    -O2
+    -Wall
+    -fno-warn-missing-pattern-synonym-signatures
+    -fno-warn-missing-home-modules
+    -fno-warn-unused-imports
+    -Werror=missing-fields
+    -Werror=incomplete-patterns
+
+  build-depends : base >= 4.5 && < 5.0
+                , Carnot

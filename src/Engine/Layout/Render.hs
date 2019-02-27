@@ -2,7 +2,6 @@
 module Engine.Layout.Render where
 
 import Delude
-import Linear
 
 import Diagrams.Core (InSpace, Transformable)
 import qualified Diagrams.TwoD.Transform as T
@@ -48,6 +47,7 @@ makeRenderLayout layout = do
             let tv = V2 (-outputSize^.width/2) (outputSize^.height/2)
             let t = boxAlignTransform containerSize outputSize (desc^.boxAlign)
             t . T.translate tv <$> return (view renderAction renderTextLayout)
+        Layout_Empty -> return mempty
 
     paddingOffset p = V2 (p^.left - p^.right) (p^.bottom - p^.top)
 
@@ -82,7 +82,7 @@ makeRenderLayout layout = do
 
 calcLineupBBoxes
     :: Size AbsoluteSize -> Size AbsoluteSize
-    -> LineupDesc -> [Layout] -> (AbsoluteSize, [BBox AbsoluteSize])
+    -> LineupDesc -> [Layout] -> (AbsoluteSize, [Rect AbsoluteSize])
 calcLineupBBoxes canvasSize containerSize desc ls
     = (sizeDir leftoverSize, foldOff 0 finalSizes)
     where
@@ -127,9 +127,9 @@ calcLineupBBoxes canvasSize containerSize desc ls
 
     foldOff _    []     = []
     foldOff !acc (s:sz) = case desc^.direction of
-        LineupDirection_Horizontal -> BBox (V2 acc 0) s
+        LineupDirection_Horizontal -> Rect (V2 acc 0) s
             : foldOff (acc + s^.width + spaceAdv) sz
-        LineupDirection_Vertical   -> BBox (V2 0 (-acc)) s
+        LineupDirection_Vertical   -> Rect (V2 0 (-acc)) s
             : foldOff (acc + s^.height + spaceAdv) sz
 
 makeSizeDir :: a -> LineupDirection -> a -> Size a

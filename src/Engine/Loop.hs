@@ -34,7 +34,7 @@ readUserState = liftIO . readIORef =<< view userState
 
 mainLoop :: Ignition us -> Engine us ()
 mainLoop ignition = do
-    initializer ignition
+    -- initializer ignition
     loop 0 =<< getTime
     where
     -- default Config values
@@ -88,13 +88,17 @@ closeWindow = do
     ctx <- use $ graphics.context
     setWindowShouldClose ctx True
 
-igniteEngine :: Context -> us -> Ignition us -> IO ()
-igniteEngine ctx st ignition = do
+igniteEngine :: Context -> Ignition us -> IO ()
+igniteEngine ctx ignition = do
+    makeContextCurrent (Just ctx)
     initialEventQueue    <- initEvents ctx Nothing
     initialGraphicsState <- initGraphics ctx
-    evalStateT (mainLoop ignition) $ EngineState
-        { _userState  = st
-        , _eventQueue = initialEventQueue
-        , _graphics   = initialGraphicsState
-        }
 
+    let makeEngineState st = EngineState
+            { _userState  = st
+            , _eventQueue = initialEventQueue
+            , _graphics   = initialGraphicsState
+            }
+
+    st <- evalStateT (initializer ignition) $ makeEngineState ()
+    evalStateT (mainLoop ignition) $ makeEngineState st

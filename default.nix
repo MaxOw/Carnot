@@ -4,8 +4,8 @@ let ghc = nixpkgs.haskell.packages.${compiler}.override {
         # TODO: get packages from github
         # generic-lens-labels = loadLocal self "generic-lens-labels";
         # named               = loadLocal self "named";
-        # halive = loadDirec self "${./../../Projects/Gridlock/halive}";
-        freetype-simple       = loadLocal self "freetype-simple";
+        # freetype-simple       = loadLocal self "freetype-simple";
+        reload-utils = loadDirec self "${./../reload-utils}";
       };
     };
 

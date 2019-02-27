@@ -5,6 +5,8 @@ module Engine.Graphics
     , draw
     , drawBatch
     , swapBuffers
+    , orthoProjection, orthoProjectionFor
+    , positionToViewMatrix
     , fullyUpdateAtlas
 
     , batchRenderAction
@@ -15,30 +17,35 @@ module Engine.Graphics
     , loadFont
     , loadFontFamily
     , createFontHierarchy
-    , makeRenderChar
+    -- , makeRenderChar
     -- , makeRenderText
     , makeRenderTextLayout
 
+    , updateZIndex, setZIndex, setZIndexAtLeast, setZIndexAtMost
+
     , renderShape
     , renderFromAtlas
-    , renderTexture
     , renderComposition
 
+    , renderActionBBox
+
     , loadTextureToAtlas
+    , renderImg
     ) where
 
 import Delude
 import Linear
+import qualified Data.Sequence as Seq
 import qualified Data.Char as Char
 import qualified Data.List as List
+-- import qualified Data.Vector.Algorithms.Intro as M
+-- import qualified Data.Vector.Mutable as M
 
 import qualified Diagrams.Transform as T
 import qualified Diagrams.TwoD.Transform as T
 
 import Engine.Graphics.Types as Types
 import Engine.Graphics.Draw.Atlas
-import Engine.Graphics.Draw.Shape
-import Engine.Graphics.Draw.Texture
 
 import Engine.FontsManager
 import Engine.Layout.Types
@@ -48,27 +55,38 @@ import qualified Engine.Graphics.TextureAtlas as Atlas
 import qualified Engine.Context as Context
 import Engine.Types
 import Engine.Context (Context)
-import Engine.Graphics.Utils (loadImageSync, createTextureBufferFrom)
+import Engine.Graphics.Utils (loadImageSync, createTextureBufferFrom, mkMatHomo2)
+import Codec.Picture (Image(..), convertRGBA8)
+
+--------------------------------------------------------------------------------
 
 initDrawProcedure :: MonadIO m => TextureAtlas -> m DrawProcedure
 initDrawProcedure atlas = do
     drawAtlas    <- initDrawAtlas
-    drawTextures <- initDrawTextures
-    drawShapes   <- initDrawShapes
+ -- drawTextures <- initDrawTextures
+ -- drawShapes   <- initDrawShapes
  -- drawPolygons <- initDrawPolygons
     return $ \p r -> do
-        drawAtlas atlas p $ r^.requestedAtlas
-        drawTextures    p $ r^.requestedTextures
-        drawShapes      p $ r^.requestedShapes
+        unlessEmpty (sortZIndex $ r^.requestedAtlas) $ drawAtlas atlas p
+     -- unlessEmpty (r^.requestedTextures) $ drawTextures    p
+     -- drawShapes      p $ r^.requestedShapes
      -- drawPolygons    p $ r^.requestedPolygons
+
+    where
+    unlessEmpty x f
+        | isn't _Empty x = f x
+        | otherwise      = return ()
+
+    sortZIndex :: AtlasBatch -> AtlasBatch
+    sortZIndex = Seq.sortBy $ comparing $ view zindex
 
 batchRenderAction :: RenderAction -> DrawRequest
 batchRenderAction = go def
     where
     go r = \case
-        RenderFromAtlas     desc -> r & requestedAtlas    %~ (desc:)
-        RenderShape         desc -> r & requestedShapes   %~ (desc:)
-        RenderTexture       desc -> r & requestedTextures %~ (desc:)
+        RenderFromAtlas     desc -> r & requestedAtlas    %~ (|> desc)
+        -- RenderShape         desc -> r & requestedShapes   %~ (|> desc)
+        -- RenderTexture       desc -> r & requestedTextures %~ (|> desc)
         RenderComposition t acts -> foldl' go r $ T.transform t acts
 
 --------------------------------------------------------------------------------
@@ -95,7 +113,7 @@ drawBatch projMatrix batch = do
     drawProc <- use $ graphics.drawProcedure
     liftIO $ drawProc projMatrix batch
 
-loadTextureToAtlas :: FilePath -> Engine us (Maybe Texture)
+loadTextureToAtlas :: FilePath -> Engine us (Maybe Img)
 loadTextureToAtlas path = do
     atlas <- use $ graphics.textureAtlas
     -- mTex <- loadTexture path
@@ -105,9 +123,10 @@ loadTextureToAtlas path = do
         Just img -> do
             buf <- createTextureBufferFrom img
             Atlas.addTexture atlas buf
+            let (Image w h _) = convertRGBA8 img
             -- deleteTextureBuffer buf
-            let tex = buf ^. texture
-            return (Just tex)
+            let tex = buf^.texture
+            return (Just $ mkImg tex (Size w h))
 
 {-
 loadTexture :: MonadIO m => FilePath -> m (Maybe Texture)
@@ -134,7 +153,7 @@ createFontHierarchy names = do
     fm <- use $ graphics.fontsManager
     managerCreateFontHierarchy fm names
 
-makeDrawCharStep :: FontStyle -> Char -> Engine us (Maybe DrawCharStep)
+makeDrawCharStep :: FontStyleRes -> Char -> Engine us (Maybe DrawCharStep)
 makeDrawCharStep fs char = do
     atlas <- use $ graphics.textureAtlas
     mGlyph <- hierarchy_loadGlyph (fs^.fonts) key
@@ -199,7 +218,7 @@ data DrawRichStep
 
 makeRenderTextLayout :: TextLayout -> Engine us RenderTextLayout
 makeRenderTextLayout t = do
-    ms <- mapM (uncurry getFontMetrics) styles
+    ms <- mapM (uncurry getFontMetrics) =<< styles
     let mlh        = t^.minLineHeight.to pixelsToPoints
     let maxOf0 l   = fromMaybe 0 . maximumOf (traverse.l)
     let lineheight = max mlh $ maxOf0 lineHeight ms
@@ -216,23 +235,32 @@ makeRenderTextLayout t = do
     where
     vertOff v = T.translateY (pointsToPixels $ negate v)
     styles = uniq . mapMaybe getStyle $ t^.content
-    uniq = ordNub . mapMaybe (\f -> (,f^.fontSize) <$> getPF f)
-    getPF f = getPrimaryFont (f^.fonts) (f^.bold) (f^.italic)
+    uniq = fmap simp . mapM retriveHierarchy
+    simp = ordNub . mapMaybe (\f -> (,f^.fontSize) <$> getPF f)
     getStyle = \case
         RichText_Span fs _ -> Just fs
         RichText_Image   _ -> Nothing
+
+    getPF f = getPrimaryFont (f^.fonts) (f^.bold) (f^.italic)
 
     -- toRichSteps :: [RichText] -> [DrawRichStep]
     toRichSteps = fmap concat . mapM toDraw
     -- toRichSteps _ = []
 
+    retriveHierarchy :: FontStyle -> Engine us FontStyleRes
+    retriveHierarchy f = do
+        h <- createFontHierarchy (f^.fonts)
+        return $ f { fontStyle_fonts = h }
+
     -- toDraw :: RichText -> [DrawRichStep]
     toDraw :: RichText -> Engine us [DrawRichStep]
     toDraw = \case
-        RichText_Span  fs x -> catMaybes <$> (mapM (toDrawChar fs) $ toString x)
+        RichText_Span  fs x -> do
+            fh <- retriveHierarchy fs
+            catMaybes <$> (mapM (toDrawChar fh) $ toString x)
         RichText_Image img  -> return [DrawRichImg (img^.texture) imgAdv]
-            where
-            imgAdv = pixelsToPoints $ img^.size._x -- TODO: fix this!
+            where -- TODO: fix this!
+            imgAdv = pixelsToPoints $ fromIntegral $ img^.size.width
 
     -- toDrawChar :: FontStyle -> Char -> DrawRichStep
     toDrawChar fs c
@@ -400,8 +428,8 @@ renderRichSteps
         trans    a = T.translateX $ pointsToPixels a
 
         drawTex a t = renderFromAtlas $ def
-            & textureId      .~ t
-            & modelTransform .~ T.translationX (pointsToPixels a)
+            & textureId       .~ Just t
+            & modelTransform  .~ T.translationX (pointsToPixels a)
 
 
 stepAdvance :: Advance -> DrawRichStep -> Advance
@@ -414,14 +442,16 @@ stepAdvance spaceAdv = \case
 
 toRenderChar :: DrawCharStep -> RenderAction
 toRenderChar x = renderFromAtlas $ def
-    & textureId      .~ (x^.texture)
-    & color          .~ (x^.color)
-    & modelTransform .~ (x^.modelTransform)
+    & textureId       .~ (Just $ x^.texture)
+    & color           .~ (x^.color)
+    & modelTransform  .~ (x^.modelTransform)
 
+{-
 makeRenderChar :: FontStyle -> Char -> Engine us RenderAction
 makeRenderChar fs char = do
     mDraw <- makeDrawCharStep fs char
     return $ renderComposition $ map toRenderChar $ maybeToList mDraw
+-}
 
 fullyUpdateAtlas :: Engine us ()
 fullyUpdateAtlas = Atlas.fullUpdate =<< use (graphics.textureAtlas)
@@ -429,16 +459,104 @@ fullyUpdateAtlas = Atlas.fullUpdate =<< use (graphics.textureAtlas)
 swapBuffers :: Engine us ()
 swapBuffers = Context.swapBuffers =<< use (graphics.context)
 
+positionToViewMatrix :: V2 Float -> Mat4
+positionToViewMatrix
+    = mkMatHomo2 . flip T.translate mempty . negate . fmap realToFrac
+
+orthoProjection
+    :: OrthoProjectionOpts
+    -> Engine us Mat4
+orthoProjection opts = do
+    canvasSize <- Context.getFramebufferSize =<< use (graphics.context)
+    let wh = over each fromIntegral canvasSize
+    return $ orthoProjectionFor (uncurry Size wh) opts
+
+orthoProjectionFor
+    :: Size Float
+    -> OrthoProjectionOpts
+    -> Mat4
+orthoProjectionFor (Size sw sh) opts
+    = mkOrtho (hori aa) (vert bb)
+    where
+    wh = over each realToFrac (sw, sh)
+    (aa, bb) = fromMaybe wh (orthoNorm wh <$> opts^.normalization)
+    mkOrtho (a0, a1) (b0, b1) = ortho a0 a1 b0 b1 0 1
+
+    orthoNorm (w, h) n = case n of
+        OrthoNorm_Width  -> (  1, h/w)
+        OrthoNorm_Height -> (w/h,   1)
+        OrthoNorm_Both   -> (  1,   1)
+
+    hori x = case opts^.boxAlign.horizontal of
+        Align_Left   -> ( 0  , a  )
+        Align_Center -> (-a/2, a/2)
+        Align_Right  -> (-a  , 0  )
+        where a = x / opts^.scale
+
+    vert x = case opts^.boxAlign.vertical of
+        Align_Top    -> ( 0  , b  )
+        Align_Middle -> (-b/2, b/2)
+        Align_Bottom -> (-b  , 0  )
+        where b = x / opts^.scale
+
+--------------------------------------------------------------------------------
+
+updateZIndex :: (Word32 -> Word32) -> RenderAction -> RenderAction
+updateZIndex f = \case
+    RenderFromAtlas     ad -> RenderFromAtlas     $ over zindex f ad
+    RenderComposition t rs -> RenderComposition t $ map (updateZIndex f) rs
+
+setZIndex :: Word32 -> RenderAction -> RenderAction
+setZIndex = updateZIndex . const
+
+setZIndexAtLeast :: Word32 -> RenderAction -> RenderAction
+setZIndexAtLeast = updateZIndex . max
+
+setZIndexAtMost :: Word32 -> RenderAction -> RenderAction
+setZIndexAtMost = updateZIndex . min
+
 --------------------------------------------------------------------------------
 
 renderShape :: ShapeDesc -> RenderAction
-renderShape = RenderShape
+renderShape d = RenderFromAtlas $ def
+    & color          .~ (d^.color)
+    & modelTransform .~ (d^.modelTransform)
+    & radius         .~ rad
+    & zindex         .~ (d^.zindex)
+    where
+    rad = case d^.shapeType of
+        SimpleSquare -> 2
+        SimpleCircle -> 1
 
 renderFromAtlas :: AtlasDesc -> RenderAction
 renderFromAtlas = RenderFromAtlas
 
-renderTexture :: TextureDesc -> RenderAction
-renderTexture = RenderTexture
+-- renderTexture :: TextureDesc -> RenderAction
+-- renderTexture = RenderTexture
 
 renderComposition :: [RenderAction] -> RenderAction
 renderComposition = RenderComposition mempty
+
+renderActionBBox :: RenderAction -> Maybe (BBox Double)
+renderActionBBox x = viaNonEmpty bboxUnion
+    $ mapMaybe (uncurry transformBBox) $ go mempty x []
+    where
+    unitBBox = BBox (-0.5) 0.5
+    transformBBox t
+        = viaNonEmpty bboxFromList . T.transform t . rectToList . bboxToRect
+    go tt = \case
+        RenderFromAtlas     ad -> ((tt <> ad^.modelTransform, unitBBox):)
+        RenderComposition t rs -> foldr (.) id $ map (go (tt<>t)) rs
+
+renderImg :: Img -> RenderAction
+renderImg i = renderFromAtlas $ def
+    & colorMix  .~ 0
+    & textureId .~ Just (i^.texture)
+    & part      .~ (i^.part)
+    & zindex    .~ (i^.zindex)
+    & T.scaleX (realToFrac sw) -- (i^.size.width)  * realToFrac (i^.part.width))
+    & T.scaleY (realToFrac sh) -- (i^.size.height) * realToFrac (i^.part.height))
+    where
+    sw = fromMaybe (i^.size.width)  $ i^?part.traverse.width
+    sh = fromMaybe (i^.size.height) $ i^?part.traverse.height
+

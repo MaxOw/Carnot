@@ -7,6 +7,9 @@ module Engine.Graphics.TextureAtlas
     , lookupAtlasLocation
     , lookupAtlasLocations
 
+    , assignCustomPage
+    , swapCustomPage
+
     -- , createTextureOrigin
     , addTexture
 
@@ -15,7 +18,7 @@ module Engine.Graphics.TextureAtlas
     ) where
 
 import Delude
-import Linear
+-- import Linear
 -- import Text.Printf (printf)
 import Foreign hiding (void)
 import Graphics.GL
@@ -180,16 +183,29 @@ newAtlas = do
     let maxTexSize  = 1024
     amap      <- newRef HashMap.empty
     primary   <- newRef =<< newAtlasPages maxTexUnits maxTexSize
-    secondary <- newRef =<< newAtlasPages maxTexUnits maxTexSize
+    -- secondary <- newRef =<< newAtlasPages maxTexUnits maxTexSize
+    custom <- newRef Vector.empty
     tasksChan <- newTChanIO
     return TextureAtlas
         { textureAtlas_maxTextureUnits = maxTexUnits
         , textureAtlas_maxTextureSize  = maxTexSize
         , textureAtlas_atlasMap        = amap
         , textureAtlas_primaryPages    = primary
-        , textureAtlas_secondaryPages  = secondary
+        -- , textureAtlas_secondaryPages  = secondary
+        , textureAtlas_customPages     = custom
         , textureAtlas_tasks           = tasksChan
         }
+
+assignCustomPage :: MonadIO m => TextureAtlas -> TextureBuffer -> m PageId
+assignCustomPage atlas buf = do
+    let ref = atlas^.customPages
+    atomicModifyIORef' ref $ \v -> (Vector.snoc v buf, PageId $ Vector.length v)
+
+swapCustomPage :: MonadIO m => TextureAtlas -> PageId -> TextureBuffer -> m ()
+swapCustomPage atlas pid buf = do
+    let ref = atlas^.customPages
+    atomicModifyIORef' ref $ \v ->
+        (Vector.update v $ Vector.fromList [(unPageId pid, buf)], ())
 
 newAtlasPages :: MonadIO m => GLint -> GLint -> m AtlasPages
 newAtlasPages count pageSize = do
@@ -211,8 +227,14 @@ setupAtlas atlas program = do
     lrs <- fmap toList $ readRef $ atlas^.primaryPages
     forM_ (zip [0..] lrs) $ \(i, p) -> do
         bindTextureN i program
-            ("Texture[" ++ show i ++ "]")
+            ("Primary[" ++ show i ++ "]")
             (p^.buffer.texture)
+    cus <- fmap toList $ readRef $ atlas^.customPages
+    let s = length lrs
+    forM_ (zip [0..] cus) $ \(i, p) -> do
+        bindTextureN (s+i) program
+            ("Custom[" ++ show i ++ "]")
+            (p^.texture)
 
 tryAddSlot :: MonadIO m
     => TextureAtlas -> SlotSize -> TextureBuffer -> m (Maybe AtlasLocation)
@@ -246,22 +268,20 @@ makeLocation maxSlotSize pageNum path buf = AtlasLocation
     { atlasLocation_page      = pageNum
     , atlasLocation_offset    = locOffset
     , atlasLocation_size      = locSize
-    , atlasLocation_texCoords = makeTexCoords maxSlotSize locOffset locSize
+    -- , atlasLocation_texCoords = makeTexCoords maxSlotSize locOffset locSize
     }
     where
     locOffset = quadPathToOffset maxSlotSize path
     locSize   = over each fromIntegral $ V2 (buf^.width) (buf^.height)
 
-makeTexCoords :: SlotSize -> V2 Int -> V2 Int -> [V2 Float]
-makeTexCoords maxSlotSize locOffset locSize =
-    [ V2 x1 y1
-    , V2 x0 y1
-    , V2 x1 y0
-    , V2 x0 y0 ]
+{-
+makeTexCoords :: SlotSize -> V2 Int -> V2 Int -> Rect Float
+makeTexCoords maxSlotSize locOffset locSize = Rect vo (MkSize vs)
     where
     ss = fromIntegral (fromSlotSize maxSlotSize :: Int)
-    V2 x0 y0 = (fromIntegral <$> locOffset) ^/ ss
-    V2 x1 y1 = (fromIntegral <$> locSize + locOffset) ^/ ss
+    vo = ((fromIntegral <$> locOffset) + 0.5) ^/ ss
+    vs = ((fromIntegral <$> locSize)   - 1.0) ^/ ss
+-}
 
 addLocationRequest :: MonadIO m
     => TextureAtlas -> AtlasLocation -> TextureBuffer -> m ()
@@ -356,12 +376,6 @@ fullUpdate :: MonadIO m => TextureAtlas -> m ()
 fullUpdate atlas = incrementalUpdate atlas (return False)
 
 --------------------------------------------------------------------------------
-
-{--
-glGetInteger :: MonadIO m => GLenum -> m GLint
-glGetInteger pname = liftIO $ alloca $ \ptr ->
-    glGetIntegerv pname ptr >> peek ptr
-    --}
 
 newRef :: MonadIO m => a -> m (IORef a)
 newRef = liftIO . newIORef

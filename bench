@@ -1,0 +1,3 @@
+cabal v1-build exe:benchmark
+echo ""
+dist/build/benchmark/benchmark

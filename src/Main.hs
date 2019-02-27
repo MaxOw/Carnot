@@ -1,4 +1,5 @@
 {-# Language TemplateHaskell #-}
+{-# Options_GHC -fno-warn-unused-imports #-}
 module Main where
 
 import Delude
@@ -14,35 +15,78 @@ import Engine
 import Engine.Layout.Types
 import Engine.Layout.Render
 import Linear
+import Tests
+import Benchmarks
+
+import Reload.Utils (reacquire)
+
 
 data St = St
-   { _atlasNames :: Map Text Texture
+   { _atlasNames :: Map Text Img
    , _rend       :: DrawRequest -- RenderAction
-   , _fontHierarchy :: FontHierarchy
+   -- , _fontHierarchy :: FontHierarchy
    -- , _rend       :: Mat4 -> Engine St () -- RenderAction
+   , _scro       :: Scroller
+   , _vpos       :: V2 Float
    }
 makeLenses ''St
 
 integrate :: Integrator us
 integrate _ = return ()
 
-handleEvent :: EventHandler us
+handleEvent :: EventHandler St -- us
 handleEvent = \case
+    EventKey Key'J _ _ _ -> userState.vpos._y -= 1
+    EventKey Key'K _ _ _ -> userState.vpos._y += 1
+    EventKey Key'H _ _ _ -> userState.vpos._x -= 1
+    EventKey Key'L _ _ _ -> userState.vpos._x += 1
     EventKey Key'Q _ _ _ -> closeWindow
     _                    -> return ()
 
 render :: Renderer St
 render _delta s = do
+    let mtex0 = Map.lookup "barrel0" $ s^.atlasNames
+    let renderBarrel = maybe mempty renderImg mtex0
+
+    let vp = s^.vpos
+    (w, h) <- getFramebufferSize =<< use (graphics.context)
+    -- let vs = pure 700
+    let vs = Size (fromIntegral w) (fromIntegral h)
+
+    let viewScale = 7
+
+    projM <- orthoProjection $ def & scale .~ 1/3 -- (1/32) -- viewScale
+    let viewM = positionToViewMatrix (viewScale *^ vp)
+    let viewProjM = projM !*! viewM
+
+    updateScroller (s^.scro) (realToFrac viewScale) vp vs $ \_ ->
+        T.scale 0.1 $ T.translate (V2 30 150) $ renderBarrel
+        -- T.scale (1/32) renderBarrel
+
     fitViewport
-    glClearColor 1 1 1 0
+    glClearColor 0 0 0 0
     glClear GL_COLOR_BUFFER_BIT
 
-    projM <- orthoProjection
-    -- draw projM $ s^.rend
+    -- let r = renderImg mtex0
+
     -- drawBatch projM $ s^.rend
-    let hier = s^.fontHierarchy
-    renderLayout <- makeRenderLayout $ testLayout hier
-    draw projM renderLayout
+    -- let hier = s^.fontHierarchy
+    -- hier <- createFontHierarchy ["Arial", "SourceHanSerif"]
+
+    {- renderLayout <- makeRenderLayout testLayout -}
+    {- draw projM renderLayout -}
+    -- draw projM $ T.translateY (140) renderBarrel
+    renderScroller <- makeRenderScroller (s^.scro)
+    draw viewProjM $ renderComposition
+        [ renderScroller
+        , renderShape $ def
+            & shapeType .~ SimpleSquare
+            & color .~ Color.withOpacity Color.gray 0.1
+            & T.scaleX (realToFrac $ vs^.width)
+            & T.scaleY (realToFrac $ vs^.height)
+            & T.translate (fmap realToFrac $ viewScale *^ vp)
+        ]
+
     {-
     draw projM $ renderSimpleBox $ def
         & size  .~ Size 300 200
@@ -56,9 +100,18 @@ render _delta s = do
 
     swapBuffers
     where
+    {-
+    renderImg = \case
+        Nothing -> mempty
+        Just im -> renderFromAtlas $ def
+            & textureId .~ Just (im^.texture)
+            & colorMix  .~ 0
+            & T.scaleX (realToFrac $ im^.size.width)
+            & T.scaleY (realToFrac $ im^.size.height)
+            -}
 
-testLayout :: FontHierarchy -> Layout
-testLayout f = Layout_Box desc0
+testLayout :: Layout
+testLayout = Layout_Box desc0
     -- [ Layout_Box desc1 []
     -- , Layout_Box desc2 []
     [ hori
@@ -121,18 +174,18 @@ testLayout f = Layout_Box desc0
         & border.each.width .~ 1
         & border.each.color .~ Color.opaque c
 
-    fn = makeFontStyle f 12
+    fn = makeFontStyle defaultFonts 12
 
-testTextLayout :: FontHierarchy -> TextLayout
-testTextLayout f = def
+testTextLayout :: TextLayout
+testTextLayout = def
    -- & textAlign     .~ TextAlign_Justify
    & textAlign     .~ TextAlign_Left
    & size          .~ Size 620 400
    & minLineHeight .~ 20
-   & content       .~ fillerText f
+   & content       .~ fillerText
 
-fillerText :: FontHierarchy -> [RichText]
-fillerText f = -- mconcat $
+fillerText :: [RichText]
+fillerText = -- mconcat $
     [ tb "    Sed ut ", tr "perspiciatis" , tb " unde ", bd "omnis", tb" iste "
     , it "natus", tb " error " , bi "sit", tb" voluptatem "
     , tb "accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae "
@@ -155,7 +208,7 @@ fillerText f = -- mconcat $
     , "fugiat quo voluptas nulla pariatur?" ]
     --}
     where
-    fn = makeFontStyle f 12
+    fn = makeFontStyle defaultFonts 12
     tb = RichText_Span $ fn
     tr = RichText_Span $ fn & color  .~ Color.opaque Color.red
     it = RichText_Span $ fn & italic .~ True
@@ -195,6 +248,7 @@ fitViewport = do
     (w, h) <- getFramebufferSize =<< use (graphics.context)
     glViewport 0 0 (fromIntegral w) (fromIntegral h)
 
+{-
 orthoProjection :: Engine us Mat4
 orthoProjection = do
     canvasSize <- getFramebufferSize =<< use (graphics.context)
@@ -208,6 +262,7 @@ orthoProjection = do
  -- return $ ortho   0    (a*2) (-b*2)  0      0 1
  -- return $ ortho (-a*2)  0    (-b*2)  0      0 1
  -- return $ ortho (-a*2)  0      0    (b*2)   0 1
+-}
 
 getAtlasTexture :: Engine us Texture
 getAtlasTexture = do
@@ -218,13 +273,17 @@ getAtlasTexture = do
     let Just tex = fmap (view texture . atlasPage_buffer) l0
     return tex
 
-initialize :: Engine St ()
+defaultFonts :: [FontFamilyName]
+defaultFonts = ["Arial", "SourceHanSerif"]
+
+initialize :: Engine () St
 initialize = do
     mtex0 <- loadTextureToAtlas "imgs/barrel_E.png"
-    userState.atlasNames %= Map.alter (const mtex0) "barrel0"
+    -- userState.atlasNames %= Map.alter (const mtex0) "barrel0"
 
     mtex1 <- loadTextureToAtlas "imgs/barrel_E.png"
-    userState.atlasNames %= Map.alter (const mtex1) "barrel1"
+    -- userState.atlasNames %= Map.alter (const mtex1) "barrel1"
+    let atlasIni = catMaybes $ [("barrel0",) <$> mtex0, ("barrel1",) <$> mtex1]
     fullyUpdateAtlas
 
     -- mFont <- loadFont "Arial" "fonts/Arial.ttf"
@@ -239,26 +298,36 @@ initialize = do
         & fontBoldItalic .~ Just "fonts/Arial-Bold-Italic.ttf"
         & fontItalic     .~ Just "fonts/Arial-Italic.ttf"
 
-    hier <- createFontHierarchy ["Arial", "SourceHanSerif"]
+    -- hier <- createFontHierarchy ["Arial", "SourceHanSerif"]
     -- hier <- createFontHierarchy ["SourceHanSerif", "Arial"]
 
     -- let fs = makeFontStyle hier 12
     -- rendLine <- makeRenderText fs $ "Sed ut perspiciatis"
-    rendRich <- makeRenderTextLayout $ testTextLayout hier
+    rendRich <- makeRenderTextLayout testTextLayout
     -- draw projM rendRich
     let rnd = renderComposition
             -- [ rendLine
             -- [ T.translateY (-40) rendRich
-            [ T.translateX 10 $ rendRich^.renderAction
+            -- [ T.translateX 10 $ rendRich^.renderAction
+            [ T.translate (V2 (-320) ( 110)) $ rendRich^.renderAction
             , rendCircle
             , rendSquare
             -- [ rendRich
             ]
     -- userState.rend .= flip draw rnd
-    userState.rend .= batchRenderAction rnd
-    userState.fontHierarchy .= hier
+    -- userState.rend .= batchRenderAction rnd
+    -- userState.fontHierarchy .= hier
 
-    return ()
+    newScro <- newScroller scroConf
+
+    return $ St
+        { _atlasNames = Map.fromList atlasIni
+        -- , _rend = \_ -> return ()
+        , _rend = batchRenderAction rnd
+        -- , _fontHierarchy = undefined
+        , _scro = newScro
+        , _vpos = 0
+        }
 
     where
     rendCircle
@@ -275,17 +344,17 @@ initialize = do
             & shapeType .~ SimpleSquare
             & color     .~ Color.opaque Color.red
 
+scroConf :: ScrollerConfig
+scroConf = def
+    -- & bufferSize   .~ 1024
+    -- & bufferSize   .~ 256
+    -- & initialRange .~ Rect (pure (-0.5)) (pure 1)
+
 main :: IO ()
 main = do
-    ctx <- initWindow "Test" (800, 600)
-    let initialState = St
-            { _atlasNames = mempty
-            -- , _rend = \_ -> return ()
-            , _rend = def
-            , _fontHierarchy = undefined
-            }
+    ctx <- reacquire 0 $ initWindow "Test" (800, 600)
 
-    igniteEngine ctx initialState $ Ignition
+    igniteEngine ctx $ Ignition
         { initializer  = initialize
         , eventHandler = handleEvent
         , integrator   = integrate

@@ -4,73 +4,11 @@
 module Engine.Layout.Types (module Engine.Layout.Types) where
 
 import Delude
-import Linear
 import qualified Data.Colour as Color
 import Engine.FontsManager.Types
 import Engine.Graphics.Types
 
 import Engine.Common.Types as Engine.Layout.Types
-
---------------------------------------------------------------------------------
-
-data VerticalAlign
-   = Align_Top
-   | Align_Middle
-   | Align_Bottom
-
-data HorizontalAlign
-   = Align_Left
-   | Align_Center
-   | Align_Right
-
-data BoxAlign = BoxAlign
-   { boxAlign_vertical   :: VerticalAlign
-   , boxAlign_horizontal :: HorizontalAlign
-   }
-makeFieldsCustom ''BoxAlign
-
-pattern BoxAlign_TopLeft   = BoxAlign Align_Top Align_Left
-pattern BoxAlign_TopCenter = BoxAlign Align_Top Align_Center
-pattern BoxAlign_TopRight  = BoxAlign Align_Top Align_Right
-
-pattern BoxAlign_MiddleLeft   = BoxAlign Align_Middle Align_Left
-pattern BoxAlign_MiddleCenter = BoxAlign Align_Middle Align_Center
-pattern BoxAlign_MiddleRight  = BoxAlign Align_Middle Align_Right
-
-pattern BoxAlign_BottomLeft   = BoxAlign Align_Bottom Align_Left
-pattern BoxAlign_BottomCenter = BoxAlign Align_Bottom Align_Center
-pattern BoxAlign_BottomRight  = BoxAlign Align_Bottom Align_Right
-
-pattern BoxAlign_Middle = BoxAlign Align_Middle Align_Center
-pattern BoxAlign_Center = BoxAlign Align_Middle Align_Center
-
-instance HasPatternTopLeft BoxAlign where
-    _PatternTopLeft = BoxAlign_TopLeft
-instance HasPatternTopCenter BoxAlign where
-    _PatternTopCenter = BoxAlign_TopCenter
-instance HasPatternTopRight BoxAlign where
-    _PatternTopRight = BoxAlign_TopRight
-instance HasPatternMiddleLeft BoxAlign where
-    _PatternMiddleLeft = BoxAlign_MiddleLeft
-instance HasPatternMiddleCenter BoxAlign where
-    _PatternMiddleCenter = BoxAlign_MiddleCenter
-instance HasPatternMiddleRight BoxAlign where
-    _PatternMiddleRight = BoxAlign_MiddleRight
-instance HasPatternBottomLeft BoxAlign where
-    _PatternBottomLeft = BoxAlign_BottomLeft
-instance HasPatternBottomCenter BoxAlign where
-    _PatternBottomCenter = BoxAlign_BottomCenter
-instance HasPatternBottomRight BoxAlign where
-    _PatternBottomRight = BoxAlign_BottomRight
-instance HasPatternCenter BoxAlign where
-    _PatternCenter = BoxAlign_Center
-
-{-
-instance HasPatternLeft HorizontalAlign where
-    _PatternLeft = AlignLeft
-instance HasPatternRight HorizontalAlign where
-    _PatternRight = AlignRight
--}
 
 --------------------------------------------------------------------------------
 
@@ -125,7 +63,7 @@ instance Default BoxDesc where
     def = BoxDesc
         { boxDesc_boxAlign = Center
         , boxDesc_padding  = def
-        , boxDesc_size     = Size (1 @@ cpct) (1 @@ cpct)
+        , boxDesc_size     = Size (1 @@ fill) (1 @@ fill)
         , boxDesc_color    = Color.transparent
         , boxDesc_border   = def
         }
@@ -178,12 +116,6 @@ instance Default LineupDesc where
         , lineupDesc_justify   = LineupJustify_Start
         }
 
-data BBox a = BBox
-   { bbox_offset :: V2 a
-   , bbox_size   :: Size a
-   }
-makeFieldsCustom ''BBox
-
 data TextAlign
    = TextAlign_Left
    | TextAlign_Right
@@ -204,20 +136,30 @@ instance Default TextDesc where
         , textDesc_minLineHeight = 0
         }
 
-data Image = Image
-   { image_texture :: Texture
-   , image_size    :: V2 AbsoluteSize
-   }
-makeFieldsCustom ''Image
+type FontStyle    = FontStyleF [FontFamilyName]
+type FontStyleRes = FontStyleF FontHierarchy
 
 data RichText
    = RichText_Span  FontStyle Text
-   | RichText_Image Image
+   | RichText_Image Img
 
 data Layout
    = Layout_Box    BoxDesc    [Layout]
    | Layout_Lineup LineupDesc [Layout]
    | Layout_Text   TextDesc   [RichText]
+   | Layout_Empty
+
+layoutBox :: BoxDesc -> [Layout] -> Layout
+layoutBox = Layout_Box
+
+layoutLineup :: LineupDesc -> [Layout] -> Layout
+layoutLineup = Layout_Lineup
+
+layoutText :: TextDesc -> [RichText] -> Layout
+layoutText = Layout_Text
+
+layoutEmpty :: Layout
+layoutEmpty = Layout_Empty
 
 verticalLineup :: [Layout] -> Layout
 verticalLineup = Layout_Lineup (def & direction .~ Vertical)
@@ -227,8 +169,8 @@ horizontalLineup = Layout_Lineup (def & direction .~ Horizontal)
 
 --------------------------------------------------------------------------------
 
-data FontStyle = FontStyle
-   { fontStyle_fonts         :: FontHierarchy
+data FontStyleF a = FontStyle
+   { fontStyle_fonts         :: a -- [FontFamilyName] -- FontHierarchy
    , fontStyle_fontSize      :: FontSize
    , fontStyle_color         :: AlphaColor
    , fontStyle_bold          :: Bool
@@ -236,9 +178,10 @@ data FontStyle = FontStyle
    , fontStyle_underscore    :: Bool
    , fontStyle_strikethrough :: Bool
    }
-makeFieldsCustom ''FontStyle
+makeFieldsCustom ''FontStyleF
 
-makeFontStyle :: FontHierarchy -> FontSize -> FontStyle
+-- makeFontStyle :: FontHierarchy -> FontSize -> FontStyle
+makeFontStyle :: a -> FontSize -> FontStyleF a
 makeFontStyle f fs = FontStyle
    { fontStyle_fonts         = f
    , fontStyle_fontSize      = fs

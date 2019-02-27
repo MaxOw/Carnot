@@ -2,6 +2,7 @@ module Engine.Context
     ( Context
     , getTime
     , initWindow
+    , makeContextCurrent
     , getPrimaryDPI
     , setWindowShouldClose
     , windowShouldClose
@@ -58,6 +59,9 @@ initWindow title (winWidth, winHeight) = do
     stderrErrorCallback :: GLFW.ErrorCallback
     -- stderrErrorCallback _ = hPutStrLn stderr
     stderrErrorCallback _ = hPutStrLn stdout
+
+makeContextCurrent :: MonadIO m => Maybe Context -> m ()
+makeContextCurrent = liftIO . GLFW.makeContextCurrent
 
 getPrimaryDPI :: MonadIO m => m (Maybe Int)
 getPrimaryDPI = do

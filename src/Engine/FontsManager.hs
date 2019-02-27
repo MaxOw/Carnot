@@ -16,8 +16,9 @@ module Engine.FontsManager
     )where
 
 import Delude
-import Linear
 import qualified Data.HashMap.Strict as HashMap
+
+import Control.Concurrent.STM.TMVar
 
 import Foreign hiding (void)
 import Graphics.Rendering.FreeType.Internal
@@ -27,7 +28,7 @@ import qualified Graphics.Rendering.FreeType.Internal.GlyphSlot as GlyphSlot
 import qualified Graphics.Rendering.FreeType.Internal.GlyphMetrics as Metrics
 import qualified Graphics.Rendering.FreeType.Internal.Size as Size
 import qualified Graphics.Rendering.FreeType.Internal.SizeMetrics as SizeMetrics
-import qualified Graphics.Rendering.FreeType.Internal.BBox as BBox
+-- import qualified Graphics.Rendering.FreeType.Internal.BBox as BBox
 
 import Engine.FontsManager.Types
 -- import Engine.FontsManager.FreeTypeError
@@ -40,9 +41,9 @@ getFontMetrics :: MonadIO m => Font -> FontSize -> m FontMetrics
 getFontMetrics font fontSize = do
     mSpaceAdv <- fmap (view advance) <$> font_loadGlyph font fontSize ' '
     faceSize <- liftIO $ peek $ Face.size (font^.ftFace)
-    bbox <- liftIO $ peek $ Face.bbox (font^.ftFace)
+    -- bbox <- liftIO $ peek $ Face.bbox (font^.ftFace)
     sizeMetrics <- liftIO $ peek $ Size.metrics faceSize
-    let yMax = fromIntegral $ BBox.yMax bbox
+    -- let yMax = fromIntegral $ BBox.yMax bbox
     let faceHeight = fromIntegral $ SizeMetrics.height sizeMetrics
     let asc = fromIntegral $ SizeMetrics.ascender sizeMetrics
     -- let desc = fromIntegral . abs $ SizeMetrics.descender sizeMetrics
@@ -128,11 +129,13 @@ initFontsManager mDPI = do
     lib <- assertFreeTypeEither initFreeType
     fontsMapVar <- newTVarIO mempty
     familiesMapVar <- newTVarIO mempty
+    hierarchiesMapVar <- atomically $ newTMVar mempty
     return $ FontsManager
-        { fontsManager_ftLib       = lib
-        , fontsManager_deviceDPI   = fromMaybe 72 mDPI
-        , fontsManager_fontsMap    = fontsMapVar
-        , fontsManager_familiesMap = familiesMapVar
+        { fontsManager_ftLib          = lib
+        , fontsManager_deviceDPI      = fromMaybe 72 mDPI
+        , fontsManager_fontsMap       = fontsMapVar
+        , fontsManager_familiesMap    = familiesMapVar
+        , fontsManager_hierarchiesMap = hierarchiesMapVar
         }
 
 managerLoadFont :: MonadIO m
@@ -182,9 +185,21 @@ releaseFontFamily d = do
 
 managerCreateFontHierarchy :: MonadIO m
     => FontsManager -> [FontFamilyName] -> m FontHierarchy
-managerCreateFontHierarchy m names = FontHierarchy
-    <$> fmap catMaybes (mapM (lookupFontFamily m) names)
-    <*> newTVarIO mempty
+managerCreateFontHierarchy m names = do
+    let var = view hierarchiesMap m
+    hmap <- atomically $ takeTMVar var
+    case HashMap.lookup names hmap of
+        Just hier -> do
+            atomically $ putTMVar var hmap
+            return hier
+        Nothing -> do
+            newHier <- createHierarchy
+            atomically $ putTMVar var $ HashMap.insert names newHier hmap
+            return newHier
+    where
+    createHierarchy = FontHierarchy
+        <$> fmap catMaybes (mapM (lookupFontFamily m) names)
+        <*> newTVarIO mempty
 
 getPrimaryFont :: FontHierarchy -> Bool -> Bool -> Maybe Font
 getPrimaryFont h isBold isItalic

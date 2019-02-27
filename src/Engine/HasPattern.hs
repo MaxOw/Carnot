@@ -1,4 +1,4 @@
-module HasPattern where
+module Engine.HasPattern where
 
 
 class HasPatternTopLeft s where _PatternTopLeft :: s

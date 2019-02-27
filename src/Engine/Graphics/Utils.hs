@@ -54,9 +54,6 @@ shaderVersion = "#version 450"
 noBuffer :: Buffer
 noBuffer = 0
 
-noTexture :: Texture
-noTexture = 0
-
 noFramebuffer :: Framebuffer
 noFramebuffer = 0
 
@@ -77,13 +74,6 @@ glCreateTexture = genObject glGenTextures
 
 glCreateVertexArray :: MonadIO m => m VAO
 glCreateVertexArray = genObject glGenVertexArrays
-
-{-
-class GlArrayBuffer x where
-    createBuffer    :: MonadIO m => GLenum -> [x] -> m Buffer
-    setBufferData   :: MonadIO m => Buffer -> GLenum -> [x] -> m ()
-    bindArrayBuffer :: MonadIO m => Program -> String -> Buffer -> GLint -> m ()
--}
 
 createBuffer :: (Storable v, MonadIO m) => GLenum -> [v] -> m Buffer
 createBuffer bufferType bufferData = do
@@ -257,7 +247,9 @@ createTexture2dWith setTextureAction = do
     glTexParameteri GL_TEXTURE_2D GL_TEXTURE_WRAP_S GL_CLAMP_TO_EDGE
     glTexParameteri GL_TEXTURE_2D GL_TEXTURE_WRAP_T GL_CLAMP_TO_EDGE
     glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER GL_LINEAR
-    glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_LINEAR
+    -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER GL_NEAREST
+    glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_NEAREST
+    -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_LINEAR
 
     setTextureAction
 
@@ -305,6 +297,7 @@ createTextureBuffer w h ptr = do
     glTexParameteri GL_TEXTURE_2D GL_TEXTURE_WRAP_T GL_CLAMP_TO_EDGE
     glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER GL_LINEAR
     glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_LINEAR
+    -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_NEAREST
     texImage2D_RGBA w h ptr
 
     glFramebufferTexture2D
@@ -362,4 +355,8 @@ loadImageSync path = do
         Left  err -> print err >> return Nothing
         Right img -> return (Just img)
     -- return $ either (const Nothing) Just eimg
+
+glGetInteger :: MonadIO m => GLenum -> m GLint
+glGetInteger pname = liftIO $ alloca $ \ptr ->
+    glGetIntegerv pname ptr >> peek ptr
 
