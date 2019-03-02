@@ -7,6 +7,7 @@ module Data.Collider
 
 import Delude
 import Linear
+import Linear.Affine
 import Data.Collider.Types
 
 collide :: CollisionShape -> CollisionShape -> Maybe (V2 Float)
@@ -18,9 +19,9 @@ collideCircles a b
     | rs >= 0   = Nothing
     | otherwise = Just $ nv ^* rs
     where
-    v  = a^.center - b^.center
+    v  = a^.center .-. b^.center
     rs = norm v - (a^.radius + b^.radius)
     nv = normalize v
 
-circle :: V2 Float -> Float -> CollisionShape
+circle :: Point V2 Float -> Float -> CollisionShape
 circle v r = Circle $ CircleDesc v r

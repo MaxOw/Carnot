@@ -520,10 +520,11 @@ setZIndexAtMost = updateZIndex . min
 renderShape :: ShapeDesc -> RenderAction
 renderShape d = RenderFromAtlas $ def
     & color          .~ (d^.color)
-    & modelTransform .~ (d^.modelTransform)
+    & modelTransform .~ (d^.modelTransform <> sca)
     & radius         .~ rad
     & zindex         .~ (d^.zindex)
     where
+    sca = T.scaling (if d^.shapeType == SimpleCircle then 2 else 1 :: Float)
     rad = case d^.shapeType of
         SimpleSquare -> 2
         SimpleCircle -> 1

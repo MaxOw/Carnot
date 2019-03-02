@@ -1,7 +1,8 @@
 {-# Language TemplateHaskell #-}
 module Engine.Loop where
 
-import Protolude
+import Protolude hiding (finally)
+import Control.Monad.Catch (finally)
 import Control.Lens hiding (Context)
 
 import Engine.Types
@@ -75,6 +76,14 @@ mainLoop ignition = do
         close <- windowShouldClose ctx
         unless close $ loop acc' startTime
 
+mainLoopWithCleanup :: Ignition us -> Engine us ()
+mainLoopWithCleanup ignition = mainLoop ignition `finally` cleanup
+    where
+    cleanup = do
+        finalizer ignition
+        atlas <- use $ graphics.textureAtlas
+        Atlas.done atlas
+
 incrementalUpdates :: Engine us Bool -> Engine us ()
 incrementalUpdates timesUp = do
     atlas <- use $ graphics.textureAtlas
@@ -101,4 +110,4 @@ igniteEngine ctx ignition = do
             }
 
     st <- evalStateT (initializer ignition) $ makeEngineState ()
-    evalStateT (mainLoop ignition) $ makeEngineState st
+    evalStateT (mainLoopWithCleanup ignition) $ makeEngineState st

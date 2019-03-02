@@ -2,7 +2,7 @@
 module Engine.Graphics.TextureAtlas
     ( module Engine.Graphics.TextureAtlas.Types
 
-    , newAtlas
+    , newAtlas, done
     , setupAtlas
     , lookupAtlasLocation
     , lookupAtlasLocations
@@ -180,7 +180,7 @@ newAtlas = do
     -- maxTexUnits <- glGetInteger GL_MAX_TEXTURE_IMAGE_UNITS
     -- maxTexSize  <- glGetInteger GL_MAX_TEXTURE_SIZE
     let maxTexUnits = 16
-    let maxTexSize  = 1024
+    let maxTexSize  = 4096
     amap      <- newRef HashMap.empty
     primary   <- newRef =<< newAtlasPages maxTexUnits maxTexSize
     -- secondary <- newRef =<< newAtlasPages maxTexUnits maxTexSize
@@ -195,6 +195,13 @@ newAtlas = do
         , textureAtlas_customPages     = custom
         , textureAtlas_tasks           = tasksChan
         }
+
+done :: MonadIO m => TextureAtlas -> m ()
+done atlas = do
+    let atlasRef l = readRef (atlas^.l)
+    mapM_ (doneTextureBuffer . view buffer) =<< atlasRef primaryPages
+    mapM_ (delObject glDeleteTextures) . HashMap.keys =<< atlasRef atlasMap
+    mapM_ doneTextureBuffer =<< atlasRef customPages
 
 assignCustomPage :: MonadIO m => TextureAtlas -> TextureBuffer -> m PageId
 assignCustomPage atlas buf = do

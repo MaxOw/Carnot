@@ -24,6 +24,7 @@ data Ignition userState = Ignition
    , eventHandler :: EventHandler userState
    , integrator   :: Integrator   userState
    , renderer     :: Renderer     userState
+   , finalizer    :: Engine userState    ()
    }
 
 data EngineState userState = EngineState

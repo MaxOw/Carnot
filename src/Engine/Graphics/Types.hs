@@ -58,7 +58,7 @@ mkImg t s = set texture t $ set size s def
 data SimpleShape
    = SimpleSquare
    | SimpleCircle
-   deriving (Show, Generic)
+   deriving (Show, Eq, Generic)
 instance NFData SimpleShape
 
 data ShapeDesc = ShapeDesc

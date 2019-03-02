@@ -1,5 +1,6 @@
 ghcid --command "cabal repl lib:Carnot"
-# ghcid --command "cabal repl exe:Carnot"
-# --ghc-options '-fno-code'"
+# ghcid --command "cabal repl lib:Carnot" --test "Tests.runTests" -W
+
 # --test "main" -W
-# --test "runTests"
+# --ghc-options '-fno-code'"
+# ghcid --command "cabal repl exe:Carnot" --test "runTests" -W
