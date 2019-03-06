@@ -223,6 +223,7 @@ executable Carnot
                 , split
                 , derive-storable
                 , quickselect
+                , exceptions
 
                 , Carnot
 

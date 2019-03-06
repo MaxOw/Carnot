@@ -35,6 +35,8 @@ integrate :: Integrator us
 integrate _ = return ()
 
 handleEvent :: EventHandler St -- us
+handleEvent _ = return ()
+{-
 handleEvent = \case
     EventKey Key'J _ _ _ -> userState.vpos._y -= 1
     EventKey Key'K _ _ _ -> userState.vpos._y += 1
@@ -42,6 +44,7 @@ handleEvent = \case
     EventKey Key'L _ _ _ -> userState.vpos._x += 1
     EventKey Key'Q _ _ _ -> closeWindow
     _                    -> return ()
+    -}
 
 render :: Renderer St
 render _delta s = do
@@ -55,17 +58,24 @@ render _delta s = do
 
     let viewScale = 7
 
+    {-
     projM <- orthoProjection $ def & scale .~ 1/3 -- (1/32) -- viewScale
     let viewM = positionToViewMatrix (viewScale *^ vp)
-    let viewProjM = projM !*! viewM
+    let viewProjM = projM !*! viewM -}
+    projM <- orthoProjection $ def -- & scale .~ 1/3 -- (1/32) -- viewScale
+        -- & set scale 64
 
+    {-
     updateScroller (s^.scro) (realToFrac viewScale) vp vs $ \_ ->
-        T.scale 0.1 $ T.translate (V2 30 150) $ renderBarrel
+        pure $ T.scale 0.1 $ T.translate (V2 30 150) $ renderBarrel
         -- T.scale (1/32) renderBarrel
 
+    -}
     fitViewport
-    glClearColor 0 0 0 0
+    -- glClearColor 0 0 0 0
+    glClearColor 1 1 1 0
     glClear GL_COLOR_BUFFER_BIT
+
 
     -- let r = renderImg mtex0
 
@@ -73,9 +83,10 @@ render _delta s = do
     -- let hier = s^.fontHierarchy
     -- hier <- createFontHierarchy ["Arial", "SourceHanSerif"]
 
-    {- renderLayout <- makeRenderLayout testLayout -}
-    {- draw projM renderLayout -}
+    renderLayout <- makeRenderLayout testLayout
+    draw projM renderLayout
     -- draw projM $ T.translateY (140) renderBarrel
+    {-
     renderScroller <- makeRenderScroller (s^.scro)
     draw viewProjM $ renderComposition
         [ renderScroller
@@ -86,6 +97,7 @@ render _delta s = do
             & T.scaleY (realToFrac $ vs^.height)
             & T.translate (fmap realToFrac $ viewScale *^ vp)
         ]
+        -}
 
     {-
     draw projM $ renderSimpleBox $ def
@@ -359,5 +371,6 @@ main = do
         , eventHandler = handleEvent
         , integrator   = integrate
         , renderer     = render
+        , finalizer    = return ()
         }
 
