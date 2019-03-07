@@ -13,6 +13,8 @@ module Engine.Graphics
 
     , pixelsToPoints
     , pointsToPixels
+    , transformBoxAlign
+    , boxAlignVector
 
     , loadFont
     , loadFontFamily
@@ -26,6 +28,8 @@ module Engine.Graphics
     , renderShape
     , renderFromAtlas
     , renderComposition
+    , renderSimpleText
+    , setDefaultFonts
 
     , renderActionBBox
 
@@ -41,6 +45,7 @@ import qualified Data.List as List
 -- import qualified Data.Vector.Algorithms.Intro as M
 -- import qualified Data.Vector.Mutable as M
 
+import Diagrams.Core (InSpace, Transformable)
 import qualified Diagrams.Transform as T
 import qualified Diagrams.TwoD.Transform as T
 
@@ -57,9 +62,6 @@ import Engine.Types
 import Engine.Context (Context)
 import Engine.Graphics.Utils (loadImageSync, createTextureBufferFrom, mkMatHomo2)
 import Codec.Picture (Image(..), convertRGBA8)
-
-import qualified Data.Colour as Color
-import qualified Data.Colour.Names as Color
 
 --------------------------------------------------------------------------------
 
@@ -83,14 +85,16 @@ initDrawProcedure atlas = do
     sortZIndex :: AtlasBatch -> AtlasBatch
     sortZIndex = Seq.sortBy $ comparing $ view zindex
 
-batchRenderAction :: RenderAction -> DrawRequest
+batchRenderAction :: RenderAction -> Engine us DrawRequest
 batchRenderAction = go def
     where
     go r = \case
-        RenderFromAtlas     desc -> r & requestedAtlas    %~ (|> desc)
-        -- RenderShape         desc -> r & requestedShapes   %~ (|> desc)
-        -- RenderTexture       desc -> r & requestedTextures %~ (|> desc)
-        RenderComposition t acts -> foldl' go r $ T.transform t acts
+        RenderFromAtlas   d    -> return $ over requestedAtlas (|> d) r
+        RenderComposition t rs -> foldlM go r (T.transform t rs)
+        RenderSimpleText  d tx -> do
+            rt <- makeRenderSimpleText d tx
+            go r rt
+            -- return r
 
 --------------------------------------------------------------------------------
 
@@ -98,18 +102,19 @@ initGraphics :: MonadIO m => Context -> m GraphicsState
 initGraphics ctx = do
     atlas <- Atlas.newAtlas
     mDPI <- Context.getPrimaryDPI
-    logOnce $ "Monitor DPI: " <> show mDPI
+    -- logOnce $ "Monitor DPI: " <> show mDPI
     fm <- initFontsManager mDPI
     proc <- initDrawProcedure atlas
     return $ GraphicsState
-        { _context       = ctx
-        , _drawProcedure = proc
-        , _textureAtlas  = atlas
-        , _fontsManager  = fm
+        { _context          = ctx
+        , _drawProcedure    = proc
+        , _textureAtlas     = atlas
+        , _fontsManager     = fm
+        , _defaultFontStyle = Nothing
         }
 
 draw :: Mat4 -> RenderAction -> Engine us ()
-draw projMatrix = drawBatch projMatrix . batchRenderAction
+draw projMatrix = drawBatch projMatrix <=< batchRenderAction
 
 drawBatch :: Mat4 -> DrawRequest -> Engine us ()
 drawBatch projMatrix batch = do
@@ -141,9 +146,9 @@ loadTexture path = do
 -}
 
 loadFont :: FontName -> FilePath -> Engine us (Maybe Font)
-loadFont fontName path = do
+loadFont fname path = do
     fm <- use $ graphics.fontsManager
-    managerLoadFont fm fontName path
+    managerLoadFont fm fname path
 
 loadFontFamily
     :: FontFamilyName -> FontFamilyDesc -> Engine us (Maybe FontFamily)
@@ -188,16 +193,29 @@ pointsToPixels = (/64) . fromIntegral
 pixelsToPoints :: Float -> Int
 pixelsToPoints = floor . (*64)
 
-{-
-makeRenderText :: FontStyle -> Text -> Engine us RenderAction
-makeRenderText fs text = do
-    m   <- getFontMetrics (fs^.font) (fs^.fontSize)
-    dws <- mapM (toDrawCharList . toString) $ words text
-    return $ vertOff m $ renderComposition $ concat $ go m 0 dws
+makeRenderSimpleText :: SimpleTextDesc -> Text -> Engine us RenderAction
+makeRenderSimpleText d text = do
+    fs <- uses (graphics.defaultFontStyle) (fromMaybe def)
+    let ff = fs
+           & over fonts    (maybe id (:)   $ d^.fontName)
+           & over fontSize (maybe id const $ d^.fontSize)
+           & set  color    (d^.color)
+    makeRenderText (d^.boxAlign) ff text
+
+makeRenderText :: BoxAlign -> FontStyle -> Text -> Engine us RenderAction
+makeRenderText align fs text = do
+    fh  <- retriveHierarchy fs
+    case getPrimaryFont (fh^.fonts) (fs^.bold) (fs^.italic) of
+        Just f -> do
+            m   <- getFontMetrics f (fs^.fontSize)
+            dws <- mapM (toDrawCharList fh . toString) $ words text
+            let s = fmap pointsToPixels $ Size (calcWidth m dws) (m^.lineHeight)
+            return $ transformBoxAlign s align $ vertOff m
+                   $ renderComposition $ concat $ go m 0 dws
+        Nothing -> return mempty
     where
     vertOff m = T.translateY (pointsToPixels $ negate $ m^.verticalOffset)
-    toDrawCharList
-        = fmap catMaybes . mapM (makeDrawCharStep fs)
+    toDrawCharList fh = fmap catMaybes . mapM (makeDrawCharStep fh)
 
     go _ _       []  = []
     go m !adv (w:ws) = drawWord adv w : go m (adv + off) ws
@@ -210,7 +228,29 @@ makeRenderText fs text = do
         drawChar = toRenderChar . over modelTransform trans
         trans    = T.translateX $ pointsToPixels adv
         off      = l^.advance
--}
+
+    calcWidth m ws = (sum $ map (sumOf (traverse.advance)) ws)
+                   + (max 0 (length ws-1) * view minSpaceAdvance m)
+
+transformBoxAlign :: (InSpace V2 n t, Fractional n, Transformable t)
+    => Size n -> BoxAlign -> t -> t
+transformBoxAlign s align = T.translate (s^._Wrapped * vv)
+    where
+    V2 x y = boxAlignVector align
+    vv = V2 (-x-0.5) (0.5-y)
+
+boxAlignVector :: Fractional n => BoxAlign -> V2 n
+boxAlignVector align = V2 hori vert
+    where
+    hori = case align^.horizontal of
+        Align_Left   -> -(0.5)
+        Align_Center ->   0
+        Align_Right  ->   0.5
+
+    vert = case align^.vertical of
+        Align_Top    ->   0.5
+        Align_Middle ->   0
+        Align_Bottom -> -(0.5)
 
 data DrawRichStep
    = DrawRichChar  DrawCharStep
@@ -250,11 +290,6 @@ makeRenderTextLayout t = do
     toRichSteps = fmap concat . mapM toDraw
     -- toRichSteps _ = []
 
-    retriveHierarchy :: FontStyle -> Engine us FontStyleRes
-    retriveHierarchy f = do
-        h <- createFontHierarchy (f^.fonts)
-        return $ f { fontStyle_fonts = h }
-
     -- toDraw :: RichText -> [DrawRichStep]
     toDraw :: RichText -> Engine us [DrawRichStep]
     toDraw = \case
@@ -273,6 +308,11 @@ makeRenderTextLayout t = do
         | otherwise        = fmap DrawRichChar <$> makeDrawCharStep fs c
         where
         cat = (Char.generalCategory c ==)
+
+retriveHierarchy :: FontStyle -> Engine us FontStyleRes
+retriveHierarchy f = do
+    h <- createFontHierarchy (f^.fonts)
+    return $ f { fontStyle_fonts = h }
 
 data DrawWordStep
    = DrawWord [DrawRichStep]
@@ -508,6 +548,7 @@ updateZIndex :: (Word32 -> Word32) -> RenderAction -> RenderAction
 updateZIndex f = \case
     RenderFromAtlas     ad -> RenderFromAtlas     $ over zindex f ad
     RenderComposition t rs -> RenderComposition t $ map (updateZIndex f) rs
+    RenderSimpleText  d tx -> RenderSimpleText (over zindex f d) tx
 
 setZIndex :: Word32 -> RenderAction -> RenderAction
 setZIndex = updateZIndex . const
@@ -551,6 +592,7 @@ renderActionBBox x = viaNonEmpty bboxUnion
     go tt = \case
         RenderFromAtlas     ad -> ((tt <> ad^.modelTransform, unitBBox):)
         RenderComposition t rs -> foldr (.) id $ map (go (tt<>t)) rs
+        RenderSimpleText  _ _  -> id -- TODO: calc bbox
 
 renderImg :: Img -> RenderAction
 renderImg i = renderFromAtlas $ def
@@ -564,4 +606,13 @@ renderImg i = renderFromAtlas $ def
     where
     sw = fromMaybe (i^.size.width)  $ i^?part.traverse.width
     sh = fromMaybe (i^.size.height) $ i^?part.traverse.height
+
+renderSimpleText :: SimpleTextDesc -> Text -> RenderAction
+renderSimpleText = RenderSimpleText
+
+setDefaultFonts :: [FontFamilyName] -> FontSize -> Engine us ()
+setDefaultFonts fns fs = do
+    graphics.defaultFontStyle .= Just def
+    graphics.defaultFontStyle._Just.fonts    .= fns
+    graphics.defaultFontStyle._Just.fontSize .= fs
 

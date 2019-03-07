@@ -171,19 +171,6 @@ boxAlignTransform containerSize contentSize align
     = T.translate (       containerSize^._Wrapped * boxAlignVector align)
     . T.translate (negate $ contentSize^._Wrapped * boxAlignVector align)
 
-boxAlignVector :: Fractional n => BoxAlign -> V2 n
-boxAlignVector align = V2 hori vert
-    where
-    hori = case align^.horizontal of
-        Align_Left   -> -(0.5)
-        Align_Center ->   0
-        Align_Right  ->   0.5
-
-    vert = case align^.vertical of
-        Align_Top    ->   0.5
-        Align_Middle ->   0
-        Align_Bottom -> -(0.5)
-
 calcBoxSize
     :: Size AbsoluteSize
     -> Size AbsoluteSize

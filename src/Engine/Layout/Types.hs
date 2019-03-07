@@ -136,9 +136,6 @@ instance Default TextDesc where
         , textDesc_minLineHeight = 0
         }
 
-type FontStyle    = FontStyleF [FontFamilyName]
-type FontStyleRes = FontStyleF FontHierarchy
-
 data RichText
    = RichText_Span  FontStyle Text
    | RichText_Image Img
@@ -166,31 +163,6 @@ verticalLineup = Layout_Lineup (def & direction .~ Vertical)
 
 horizontalLineup :: [Layout] -> Layout
 horizontalLineup = Layout_Lineup (def & direction .~ Horizontal)
-
---------------------------------------------------------------------------------
-
-data FontStyleF a = FontStyle
-   { fontStyle_fonts         :: a -- [FontFamilyName] -- FontHierarchy
-   , fontStyle_fontSize      :: FontSize
-   , fontStyle_color         :: AlphaColor
-   , fontStyle_bold          :: Bool
-   , fontStyle_italic        :: Bool
-   , fontStyle_underscore    :: Bool
-   , fontStyle_strikethrough :: Bool
-   }
-makeFieldsCustom ''FontStyleF
-
--- makeFontStyle :: FontHierarchy -> FontSize -> FontStyle
-makeFontStyle :: a -> FontSize -> FontStyleF a
-makeFontStyle f fs = FontStyle
-   { fontStyle_fonts         = f
-   , fontStyle_fontSize      = fs
-   , fontStyle_color         = Color.opaque Color.black
-   , fontStyle_bold          = False
-   , fontStyle_italic        = False
-   , fontStyle_underscore    = False
-   , fontStyle_strikethrough = False
-   }
 
 {-
 data RichTextTree a

@@ -141,6 +141,31 @@ instance BoundingPoints AtlasDesc where
 
 --------------------------------------------------------------------------------
 
+data SimpleTextDesc = SimpleTextDesc
+   { simpleTextDesc_modelTransform :: T2D
+   , simpleTextDesc_zindex         :: Word32
+   , simpleTextDesc_fontName       :: Maybe FontName
+   , simpleTextDesc_fontSize       :: Maybe FontSize
+   , simpleTextDesc_color          :: AlphaColor
+   , simpleTextDesc_boxAlign       :: BoxAlign
+   } deriving (Generic)
+makeFieldsCustom ''SimpleTextDesc
+type instance N SimpleTextDesc = Float
+type instance V SimpleTextDesc = V2
+instance Transformable SimpleTextDesc where
+    transform t = over modelTransform (t <>)
+instance Default SimpleTextDesc where
+    def = SimpleTextDesc
+        { simpleTextDesc_modelTransform = mempty
+        , simpleTextDesc_zindex         = 0
+        , simpleTextDesc_fontName       = Nothing
+        , simpleTextDesc_fontSize       = Nothing
+        , simpleTextDesc_color          = Color.opaque Color.black
+        , simpleTextDesc_boxAlign       = Center
+        }
+
+--------------------------------------------------------------------------------
+
 -- type TexturesBatch = Seq TextureDesc
 type AtlasBatch    = Seq AtlasDesc
 
@@ -158,6 +183,7 @@ data GraphicsState = GraphicsState
    , _drawProcedure      :: DrawProcedure
    , _textureAtlas       :: TextureAtlas
    , _fontsManager       :: FontsManager
+   , _defaultFontStyle   :: Maybe FontStyle
    }
 makeLenses ''GraphicsState
 
@@ -166,6 +192,7 @@ makeLenses ''GraphicsState
 data RenderAction
    = RenderFromAtlas AtlasDesc
    | RenderComposition T2D [RenderAction]
+   | RenderSimpleText SimpleTextDesc Text
 
 instance Semigroup RenderAction where
     a <> b  = RenderComposition mempty [a, b]
@@ -182,11 +209,13 @@ instance Transformable RenderAction where
     transform t = \case
         RenderFromAtlas d -> RenderFromAtlas $ over modelTransform (t <>) d
         RenderComposition t0 ds -> RenderComposition (t <> t0) ds
+        RenderSimpleText  ds tx -> RenderSimpleText (transform t ds) tx
 
 instance BoundingPoints RenderAction where
     boundingPoints = \case
         RenderFromAtlas     d  -> boundingPoints d
         RenderComposition t ds -> concatMap (transform t . boundingPoints) ds
+        RenderSimpleText  _ _  -> mempty --TODO: add bounding points calculation
 
 --------------------------------------------------------------------------------
 

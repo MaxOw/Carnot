@@ -38,8 +38,8 @@ import Engine.Graphics.Utils
 --------------------------------------------------------------------------------
 
 getFontMetrics :: MonadIO m => Font -> FontSize -> m FontMetrics
-getFontMetrics font fontSize = do
-    mSpaceAdv <- fmap (view advance) <$> font_loadGlyph font fontSize ' '
+getFontMetrics font fsize = do
+    mSpaceAdv <- fmap (view advance) <$> font_loadGlyph font fsize ' '
     faceSize <- liftIO $ peek $ Face.size (font^.ftFace)
     -- bbox <- liftIO $ peek $ Face.bbox (font^.ftFace)
     sizeMetrics <- liftIO $ peek $ Size.metrics faceSize
@@ -60,14 +60,14 @@ getFontMetrics font fontSize = do
 -- to:
 -- font_glyphsMap :: TVar (HashMap CharWithSize (Maybe Glyph))
 font_loadGlyph :: MonadIO m => Font -> FontSize -> Char -> m (Maybe Glyph)
-font_loadGlyph font fontSize char =
+font_loadGlyph font fsize char =
     lookupInsertM (font^.glyphsMap) key newV relV
     where
-    key  = CharWithSize char fontSize
+    key  = CharWithSize char fsize
     relV = doneTextureBuffer . view buffer
     newV = do
         let dpi  = fromIntegral $ font^.deviceDPI
-        let fs   = fromIntegral fontSize * 64
+        let fs   = fromIntegral fsize * 64
         let face = font^.ftFace
 
         -- TODO: Fix this up...

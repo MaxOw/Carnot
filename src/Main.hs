@@ -23,7 +23,7 @@ import Reload.Utils (reacquire)
 
 data St = St
    { _atlasNames :: Map Text Img
-   , _rend       :: DrawRequest -- RenderAction
+   -- , _rend       :: DrawRequest -- RenderAction
    -- , _fontHierarchy :: FontHierarchy
    -- , _rend       :: Mat4 -> Engine St () -- RenderAction
    , _scro       :: Scroller
@@ -51,12 +51,12 @@ render _delta s = do
     let mtex0 = Map.lookup "barrel0" $ s^.atlasNames
     let renderBarrel = maybe mempty renderImg mtex0
 
-    let vp = s^.vpos
-    (w, h) <- getFramebufferSize =<< use (graphics.context)
+    -- let vp = s^.vpos
+    -- (w, h) <- getFramebufferSize =<< use (graphics.context)
     -- let vs = pure 700
-    let vs = Size (fromIntegral w) (fromIntegral h)
+    -- let vs = Size (fromIntegral w) (fromIntegral h)
 
-    let viewScale = 7
+    -- let viewScale = 7
 
     {-
     projM <- orthoProjection $ def & scale .~ 1/3 -- (1/32) -- viewScale
@@ -82,10 +82,16 @@ render _delta s = do
     -- drawBatch projM $ s^.rend
     -- let hier = s^.fontHierarchy
     -- hier <- createFontHierarchy ["Arial", "SourceHanSerif"]
+    setDefaultFonts ["Arial", "SourceHanSerif"] 10
 
     renderLayout <- makeRenderLayout testLayout
     draw projM renderLayout
-    draw projM $ T.translateY (140) renderBarrel
+    -- let dt = def & fontName .~ Just "Arial"
+           -- & fontSize .~ Just 8
+    draw projM $ T.translateY (140) $ renderComposition
+        [ renderBarrel
+        , renderSimpleText (def & set color (Color.opaque Color.red)) "Test"
+        ]
     {-
     renderScroller <- makeRenderScroller (s^.scro)
     draw viewProjM $ renderComposition
@@ -315,8 +321,9 @@ initialize = do
 
     -- let fs = makeFontStyle hier 12
     -- rendLine <- makeRenderText fs $ "Sed ut perspiciatis"
-    rendRich <- makeRenderTextLayout testTextLayout
+    -- rendRich <- makeRenderTextLayout testTextLayout
     -- draw projM rendRich
+    {-
     let rnd = renderComposition
             -- [ rendLine
             -- [ T.translateY (-40) rendRich
@@ -326,6 +333,7 @@ initialize = do
             , rendSquare
             -- [ rendRich
             ]
+            -}
     -- userState.rend .= flip draw rnd
     -- userState.rend .= batchRenderAction rnd
     -- userState.fontHierarchy .= hier
@@ -335,12 +343,13 @@ initialize = do
     return $ St
         { _atlasNames = Map.fromList atlasIni
         -- , _rend = \_ -> return ()
-        , _rend = batchRenderAction rnd
+        -- , _rend = batchRenderAction rnd
         -- , _fontHierarchy = undefined
         , _scro = newScro
         , _vpos = 0
         }
 
+    {-
     where
     rendCircle
         = T.translate (V2 200 (-200))
@@ -355,6 +364,7 @@ initialize = do
         $ renderShape $ def
             & shapeType .~ SimpleSquare
             & color     .~ Color.opaque Color.red
+    -}
 
 scroConf :: ScrollerConfig
 scroConf = def
