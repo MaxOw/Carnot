@@ -161,7 +161,7 @@ initDrawAtlas = do
         , "  else "
         , "    color = texture2D(Custom [cust], vTexCoord.xy);"
         , "  FragColor.rgb = mix(color.rgb, vColor.rgb, vColorMix);"
-        , "  FragColor.a = color.a * vColor.a;"
+        , "  FragColor.a = color.a * mix(1, vColor.a, vColorMix);"
         , "  if(vTexCoord.z < 0) FragColor = vColor;"
         , "  float r = vRadius;"
         , "  float l = length(vPosition);"

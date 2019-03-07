@@ -36,18 +36,22 @@ type AlphaColor = AlphaColour Float
 --------------------------------------------------------------------------------
 
 data Img = Img
-   { img_texture :: Texture
-   , img_size    :: Size Int
-   , img_part    :: Maybe (Rect Int)
-   , img_zindex  :: Word32
+   { img_texture  :: Texture
+   , img_size     :: Size Int
+   , img_part     :: Maybe (Rect Int)
+   , img_zindex   :: Word32
+   , img_color    :: AlphaColor
+   , img_colorMix :: Float
    }
 makeFieldsCustom ''Img
 instance Default Img where
     def = Img
-        { img_texture = noTexture
-        , img_size    = pure 0
-        , img_part    = Nothing -- unitRect
-        , img_zindex  = 0
+        { img_texture  = noTexture
+        , img_size     = pure 0
+        , img_part     = Nothing -- unitRect
+        , img_zindex   = 0
+        , img_color    = Color.transparent
+        , img_colorMix = 0
         }
 
 mkImg :: Texture -> Size Int -> Img

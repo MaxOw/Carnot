@@ -85,7 +85,7 @@ render _delta s = do
 
     renderLayout <- makeRenderLayout testLayout
     draw projM renderLayout
-    -- draw projM $ T.translateY (140) renderBarrel
+    draw projM $ T.translateY (140) renderBarrel
     {-
     renderScroller <- makeRenderScroller (s^.scro)
     draw viewProjM $ renderComposition

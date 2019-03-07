@@ -58,6 +58,9 @@ import Engine.Context (Context)
 import Engine.Graphics.Utils (loadImageSync, createTextureBufferFrom, mkMatHomo2)
 import Codec.Picture (Image(..), convertRGBA8)
 
+import qualified Data.Colour as Color
+import qualified Data.Colour.Names as Color
+
 --------------------------------------------------------------------------------
 
 initDrawProcedure :: MonadIO m => TextureAtlas -> m DrawProcedure
@@ -551,7 +554,8 @@ renderActionBBox x = viaNonEmpty bboxUnion
 
 renderImg :: Img -> RenderAction
 renderImg i = renderFromAtlas $ def
-    & colorMix  .~ 0
+    & colorMix  .~ (i^.colorMix)
+    & color     .~ (i^.color)
     & textureId .~ Just (i^.texture)
     & part      .~ (i^.part)
     & zindex    .~ (i^.zindex)
