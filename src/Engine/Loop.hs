@@ -103,11 +103,11 @@ igniteEngine ctx ignition = do
     initialEventQueue    <- initEvents ctx Nothing
     initialGraphicsState <- initGraphics ctx
 
-    let makeEngineState st = EngineState
-            { _userState  = st
+    let initialEngineState = EngineState
+            { _userState  = ()
             , _eventQueue = initialEventQueue
             , _graphics   = initialGraphicsState
             }
 
-    st <- evalStateT (initializer ignition) $ makeEngineState ()
-    evalStateT (mainLoopWithCleanup ignition) $ makeEngineState st
+    (st, engineState) <- runStateT (initializer ignition) $ initialEngineState
+    evalStateT (mainLoopWithCleanup ignition) $ engineState { _userState = st }

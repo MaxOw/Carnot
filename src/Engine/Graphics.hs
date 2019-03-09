@@ -200,7 +200,8 @@ makeRenderSimpleText d text = do
            & over fonts    (maybe id (:)   $ d^.fontName)
            & over fontSize (maybe id const $ d^.fontSize)
            & set  color    (d^.color)
-    makeRenderText (d^.boxAlign) ff text
+    T.transform (d^.modelTransform) . setZIndexAtLeast (d^.zindex)
+        <$> makeRenderText (d^.boxAlign) ff text
 
 makeRenderText :: BoxAlign -> FontStyle -> Text -> Engine us RenderAction
 makeRenderText align fs text = do

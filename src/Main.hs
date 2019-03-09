@@ -82,14 +82,14 @@ render _delta s = do
     -- drawBatch projM $ s^.rend
     -- let hier = s^.fontHierarchy
     -- hier <- createFontHierarchy ["Arial", "SourceHanSerif"]
-    setDefaultFonts ["Arial", "SourceHanSerif"] 10
+    -- setDefaultFonts ["Arial", "SourceHanSerif"] 10
 
     renderLayout <- makeRenderLayout testLayout
     draw projM renderLayout
     -- let dt = def & fontName .~ Just "Arial"
            -- & fontSize .~ Just 8
-    draw projM $ T.translateY (140) $ renderComposition
-        [ renderBarrel
+    draw projM $ renderComposition
+        [ T.translateY (140) $ renderBarrel
         , renderSimpleText (def & set color (Color.opaque Color.red)) "Test"
         ]
     {-
@@ -316,6 +316,7 @@ initialize = do
         & fontBoldItalic .~ Just "fonts/Arial-Bold-Italic.ttf"
         & fontItalic     .~ Just "fonts/Arial-Italic.ttf"
 
+    setDefaultFonts ["Arial", "SourceHanSerif"] 10
     -- hier <- createFontHierarchy ["Arial", "SourceHanSerif"]
     -- hier <- createFontHierarchy ["SourceHanSerif", "Arial"]
 
