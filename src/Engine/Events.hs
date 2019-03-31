@@ -32,7 +32,7 @@ initEvents win mq = do
     fire2 setWindowSizeCallback      EventWindowSize
     fire0 setWindowCloseCallback     EventWindowClose
     fire0 setWindowRefreshCallback   EventWindowRefresh
- -- fire1 setWindowFocusCallback     EventWindowFocus
+    fire1 setWindowFocusCallback     EventWindowFocus
  -- fire1 setWindowIconifyCallback   EventWindowIconify
     fire2 setFramebufferSizeCallback EventFramebufferSize
     fire3 setMouseButtonCallback     EventMouseButton

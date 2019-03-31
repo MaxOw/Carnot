@@ -332,7 +332,7 @@ addTexture atlas buf = whenNothingM_ lookupLoc $ do
     mSlotSize  = fitSlotSize maxTexSize =<< maximumOf traverse texSize
 
 logOnceFor :: MonadIO m => a -> Text -> m ()
-logOnceFor _what msg = putStrLn msg
+logOnceFor _what msg = putTextLn msg
 
 {-
 lookupTexture :: MonadIO m => TextureAtlas -> TextureOrigin -> m AtlasLocation

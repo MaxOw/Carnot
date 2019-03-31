@@ -22,7 +22,7 @@ data Event -- With ue
    | EventWindowSize      Int Int
    | EventWindowClose
    | EventWindowRefresh
--- | EventWindowFocus     FocusState
+   | EventWindowFocus     Bool
 -- | EventWindowIconify   IconifyState
    | EventFramebufferSize Int Int
    | EventMouseButton     MouseButton MouseButtonState ModifierKeys

@@ -1,5 +1,5 @@
 Name          : Carnot
-Version       : 0.1.13.2
+Version       : 0.1.13.3
 License       : BSD3
 -- License-File  : LICENSE
 Author        : Maksymilian Owsianny
@@ -228,6 +228,7 @@ executable Carnot
                 , Carnot
 
                 , lens
+                , generic-lens >= 1.1.0.0
                 , data-default
                 , linear
                 , boundingboxes

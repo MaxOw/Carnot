@@ -16,7 +16,7 @@ module Delude
 
 import Relude          as Exports
 import Linear          as Exports (V2(..))
-import Control.Lens    as Exports hiding (Context, uncons, transform)
+import Control.Lens    as Exports hiding (Context, uncons, transform, (??))
 import Data.Default    as Exports
 import Data.List       as Exports (dropWhileEnd)
 import Data.List.Split as Exports (splitOn, splitWhen, split, whenElt)
@@ -62,7 +62,7 @@ logOnce msg = liftIO $ do
     unless (Set.member css callStackSet) $ do
         atomicModifyIORef' logRef $ \s -> (Set.insert css s, ())
         -- putStrLn cs
-        putStrLn (toText srcLoc <> msg)
+        putTextLn (toText srcLoc <> msg)
         return ()
 
 readRecordTVar :: MonadIO m => s -> Lens' s (TVar a) -> m a

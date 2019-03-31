@@ -11,6 +11,7 @@ module Engine.Context
     ) where
 
 import Delude
+import Control.Concurrent (threadDelay)
 import Prelude (String)
 import Data.Maybe (fromJust)
 import Control.Monad.IO.Class (MonadIO(..))
@@ -53,7 +54,6 @@ initWindow title (winWidth, winHeight) = do
         GLFW.windowHint $ GLFW.WindowHint'OpenGLDebugContext True
 
         mwin <- GLFW.createWindow winWidth winHeight title Nothing Nothing
-        GLFW.pollEvents
         return mwin
 
     stderrErrorCallback :: GLFW.ErrorCallback

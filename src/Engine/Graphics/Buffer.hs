@@ -77,16 +77,6 @@ proxySizeOf :: Storable x => proxy x -> Int
 proxySizeOf = sizeOf . asProxyTypeOf (error "This shouldn't happen")
 
 {-
-test :: ArrayBufferDesc
-test =
-    [("TexCoord", baseType_enum_size (Proxy @(V3 Float)))
-    ,("Color"   , baseType_enum_size (Proxy @(V4 Float)))
-    ,("ModelX"  , baseType_enum_size (Proxy @(V3 Float)))
-    ,("ModelY"  , baseType_enum_size (Proxy @(V3 Float)))
-    ]
--}
-
-{-
 bindArrayBufferDesc :: MonadIO m => Program -> ArrayBufferDesc x -> m ()
 bindArrayBufferDesc program = go 0 . unArrayBufferDesc
     where
