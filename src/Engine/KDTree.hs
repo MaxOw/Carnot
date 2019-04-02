@@ -1,4 +1,5 @@
 {-# Language RankNTypes #-}
+{-# Language MonoLocalBinds #-}
 module Engine.KDTree
     ( module Engine.KDTree.Types
 
@@ -15,6 +16,20 @@ import Data.Select.Intro (select)
 
 import Engine.Common.Types
 import Engine.KDTree.Types
+
+--------------------------------------------------------------------------------
+
+smaller :: HasField' "field_smaller" s t => Lens' s t
+smaller = field' @"field_smaller"
+
+greater :: HasField' "field_greater" s t => Lens' s t
+greater = field' @"field_greater"
+
+pivot :: HasField' "field_pivot" s t => Lens' s t
+pivot = field' @"field_pivot"
+
+pivotDim :: HasField' "field_pivotDim" s t => Lens' s t
+pivotDim = field' @"field_pivotDim"
 
 --------------------------------------------------------------------------------
 
@@ -53,10 +68,10 @@ buildKDTreeDepth maxDepth = fromMaybe (KDTree_Leaf Vector.empty) . go KD_X maxDe
             piv = median $ Vector.map (entryViaDim dim) ps
 
     mkNode dim d piv sm gt = KDNode
-        { kdNode_smaller  = go (flipDim dim) (d-1) sm
-        , kdNode_pivot    = piv
-        , kdNode_greater  = go (flipDim dim) (d-1) gt
-        , kdNode_pivotDim = dim
+        { field_smaller  = go (flipDim dim) (d-1) sm
+        , field_pivot    = piv
+        , field_greater  = go (flipDim dim) (d-1) gt
+        , field_pivotDim = dim
         }
 
 lookup :: BBox Float -> KDTree a -> [a]

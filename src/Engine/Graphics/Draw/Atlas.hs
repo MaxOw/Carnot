@@ -28,13 +28,13 @@ batchItemFromAtlas atlas d = do
         Just lc -> do
             let V2 mx my = mkModelVecXY $ d^.modelTransform
             let mkItem x = AtlasBatchItem
-                    { atlasBatchItem_texCoord      = x
-                    , atlasBatchItem_color         = fromAlphaColor $ d^.color
-                    , atlasBatchItem_modelX        = fmap realToFrac mx
-                    , atlasBatchItem_modelY        = fmap realToFrac my
-                    , atlasBatchItem_radius        = d^.radius
-                    , atlasBatchItem_colorMix      = d^.colorMix
-                    , atlasBatchItem_customPageNum = cPid
+                    { field_texCoord      = x
+                    , field_color         = fromAlphaColor $ d^.color
+                    , field_modelX        = fmap realToFrac mx
+                    , field_modelY        = fmap realToFrac my
+                    , field_radius        = d^.radius
+                    , field_colorMix      = d^.colorMix
+                    , field_customPageNum = cPid
                     }
             return $ map mkItem lc
 

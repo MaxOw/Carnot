@@ -1,4 +1,3 @@
-{-# Language TemplateHaskell #-}
 {-# Options_GHC -fno-warn-unused-imports #-}
 module Main where
 
@@ -285,10 +284,10 @@ orthoProjection = do
 getAtlasTexture :: Engine us Texture
 getAtlasTexture = do
     atlas <- use $ graphics.textureAtlas
-    let pref = textureAtlas_primaryPages atlas
+    let pref = field_primaryPages atlas
     ls <- readIORef pref
     let l0 = viaNonEmpty head $ toList ls
-    let Just tex = fmap (view texture . atlasPage_buffer) l0
+    let Just tex = fmap (view (buffer.texture)) l0
     return tex
 
 defaultFonts :: [FontFamilyName]

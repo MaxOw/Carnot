@@ -42,8 +42,8 @@ createTextureOrigin dyn = do
     buf <- liftIO $ unsafeWith bytes $ \ptr ->
         createTextureBuffer (fromIntegral w) (fromIntegral h) (castPtr ptr)
     return $ TextureOrigin
-        { textureOrigin_buffer      = buf
-        , textureOrigin_textureSize = V2 w h
+        { field_buffer      = buf
+        , field_textureSize = V2 w h
         }
 -}
 
@@ -78,8 +78,8 @@ allSlotsFor n p
 
 emptyAtlasLayout :: SlotSize -> AtlasLayout a
 emptyAtlasLayout slotSize = AtlasLayout
-   { atlasLayout_topSlotSize = slotSize
-   , atlasLayout_quadTree    = QuadEmpty
+   { field_topSlotSize = slotSize
+   , field_quadTree    = QuadEmpty
    }
 
 insertQuad :: a -> QuadPath -> QuadTree a -> QuadTree a
@@ -187,13 +187,13 @@ newAtlas = do
     custom <- newRef Vector.empty
     tasksChan <- newTChanIO
     return TextureAtlas
-        { textureAtlas_maxTextureUnits = maxTexUnits
-        , textureAtlas_maxTextureSize  = maxTexSize
-        , textureAtlas_atlasMap        = amap
-        , textureAtlas_primaryPages    = primary
-        -- , textureAtlas_secondaryPages  = secondary
-        , textureAtlas_customPages     = custom
-        , textureAtlas_tasks           = tasksChan
+        { field_maxTextureUnits = maxTexUnits
+        , field_maxTextureSize  = maxTexSize
+        , field_atlasMap        = amap
+        , field_primaryPages    = primary
+        -- , field_secondaryPages  = secondary
+        , field_customPages     = custom
+        , field_tasks           = tasksChan
         }
 
 done :: MonadIO m => TextureAtlas -> m ()
@@ -225,8 +225,8 @@ newAtlasPage pageSize = do
     let slotSize = toSlotSize pageSize
     let ss = emptyAtlasLayout slotSize
     return $ AtlasPage
-        { atlasPage_buffer = tt
-        , atlasPage_slots  = ss
+        { field_buffer = tt
+        , field_slots  = ss
         }
 
 setupAtlas :: MonadIO m => TextureAtlas -> Program -> m ()
@@ -272,10 +272,10 @@ tryAddSlot atlas slotSize buf = do
 
 makeLocation :: SlotSize -> Int -> QuadPath -> TextureBuffer -> AtlasLocation
 makeLocation maxSlotSize pageNum path buf = AtlasLocation
-    { atlasLocation_page      = pageNum
-    , atlasLocation_offset    = locOffset
-    , atlasLocation_size      = locSize
-    -- , atlasLocation_texCoords = makeTexCoords maxSlotSize locOffset locSize
+    { field_page      = pageNum
+    , field_offset    = locOffset
+    , field_size      = locSize
+    -- , field_texCoords = makeTexCoords maxSlotSize locOffset locSize
     }
     where
     locOffset = quadPathToOffset maxSlotSize path

@@ -56,14 +56,13 @@ instance Default a => Default (Size a) where def = Size def def
 --------------------------------------------------------------------------------
 
 data Rect x = Rect
-   { rect_offset :: V2 x
-   , rect_size   :: Size x
-   } deriving (Show)
-makeFieldsCustom ''Rect
+   { field_offset :: V2 x
+   , field_size   :: Size x
+   } deriving (Generic, Show)
 instance R1 Rect where _x  = offset._x
 instance R2 Rect where _xy = offset._xy
-instance HasWidth  (Rect x) x where width  = size.width
-instance HasHeight (Rect x) x where height = size.height
+instance HasWidth  (Rect a) a where width  = size.width
+instance HasHeight (Rect a) a where height = size.height
 
 rectMinPoint :: Rect a -> V2 a
 rectMinPoint = view offset
@@ -91,8 +90,8 @@ subRectOf ra rb = Rect o s
     s = ra^.size * rb^.size
 
 data BBox a = BBox
-   { bbox_minPoint :: V2 a
-   , bbox_maxPoint :: V2 a
+   { field_minPoint :: V2 a
+   , field_maxPoint :: V2 a
    } deriving (Eq, Ord, Show, Generic)
 makeFieldsCustom ''BBox
 instance NFData a => NFData (BBox a)
@@ -150,8 +149,8 @@ data HorizontalAlign
    | Align_Right
 
 data BoxAlign = BoxAlign
-   { boxAlign_vertical   :: VerticalAlign
-   , boxAlign_horizontal :: HorizontalAlign
+   { field_vertical   :: VerticalAlign
+   , field_horizontal :: HorizontalAlign
    }
 makeFieldsCustom ''BoxAlign
 

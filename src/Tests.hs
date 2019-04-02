@@ -16,6 +16,6 @@ mainGroup = do
         [ tests_QuadTree
         ]
         -- [ tests_GridIndex
-        -- , tests_KDTree
+        -- , field_KDTree
         -- ]
 

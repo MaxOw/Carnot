@@ -1,4 +1,3 @@
-{-# Language TemplateHaskell #-}
 {-# Language StrictData #-}
 {-# Language TypeFamilies #-}
 module Engine.Layout.Types (module Engine.Layout.Types) where
@@ -13,29 +12,28 @@ import Engine.Common.Types as Engine.Layout.Types
 --------------------------------------------------------------------------------
 
 data BorderDesc = BorderDesc
-   { borderDesc_width :: AbsoluteSize
-   , borderDesc_color :: AlphaColor
-   }
-makeFieldsCustom ''BorderDesc
+   { field_width :: AbsoluteSize
+   , field_color :: AlphaColor
+   } deriving (Generic)
+instance HasWidth BorderDesc AbsoluteSize
 instance Default BorderDesc where
     def = BorderDesc
-        { borderDesc_width = 0
-        , borderDesc_color = Color.opaque Color.black
+        { field_width = 0
+        , field_color = Color.opaque Color.black
         }
 
 data BoxEdges a = BoxEdges
-   { boxEdges_top    :: a
-   , boxEdges_left   :: a
-   , boxEdges_bottom :: a
-   , boxEdges_right  :: a
-   } deriving (Functor, Foldable, Traversable)
-makeFieldsCustom ''BoxEdges
+   { field_top    :: a
+   , field_left   :: a
+   , field_bottom :: a
+   , field_right  :: a
+   } deriving (Generic, Functor, Foldable, Traversable)
 instance Default a => Default (BoxEdges a) where
     def = BoxEdges
-        { boxEdges_top    = def
-        , boxEdges_left   = def
-        , boxEdges_bottom = def
-        , boxEdges_right  = def
+        { field_top    = def
+        , field_left   = def
+        , field_bottom = def
+        , field_right  = def
         }
 
 instance Each (BoxEdges a) (BoxEdges b) a b where
@@ -52,33 +50,31 @@ traverseHorizontal f (BoxEdges a b c d) = BoxEdges
 --------------------------------------------------------------------------------
 
 data BoxDesc = BoxDesc
-   { boxDesc_boxAlign :: BoxAlign
-   , boxDesc_padding  :: BoxEdges AbsoluteSize
-   , boxDesc_size     :: Size Sizing
-   , boxDesc_color    :: AlphaColor
-   , boxDesc_border   :: BoxEdges BorderDesc
-   }
-makeFieldsCustom ''BoxDesc
+   { field_boxAlign :: BoxAlign
+   , field_padding  :: BoxEdges AbsoluteSize
+   , field_size     :: Size Sizing
+   , field_color    :: AlphaColor
+   , field_border   :: BoxEdges BorderDesc
+   } deriving (Generic)
 instance Default BoxDesc where
     def = BoxDesc
-        { boxDesc_boxAlign = Center
-        , boxDesc_padding  = def
-        , boxDesc_size     = Size (1 @@ fill) (1 @@ fill)
-        , boxDesc_color    = Color.transparent
-        , boxDesc_border   = def
+        { field_boxAlign = Center
+        , field_padding  = def
+        , field_size     = Size (1 @@ fill) (1 @@ fill)
+        , field_color    = Color.transparent
+        , field_border   = def
         }
 
 data SimpleBoxOpts = SimpleBoxOpts
-   { simpleBoxOpts_size   :: Size AbsoluteSize
-   , simpleBoxOpts_color  :: AlphaColor
-   , simpleBoxOpts_border :: BoxEdges BorderDesc
-   }
-makeFieldsCustom ''SimpleBoxOpts
+   { field_size   :: Size AbsoluteSize
+   , field_color  :: AlphaColor
+   , field_border :: BoxEdges BorderDesc
+   } deriving (Generic)
 instance Default SimpleBoxOpts where
     def = SimpleBoxOpts
-        { simpleBoxOpts_size   = def
-        , simpleBoxOpts_color  = Color.transparent
-        , simpleBoxOpts_border = def
+        { field_size   = def
+        , field_color  = Color.transparent
+        , field_border = def
         }
 
 data LineupDirection
@@ -106,14 +102,13 @@ instance HasPatternSpaceBetween LineupJustify where
     _PatternSpaceBetween = LineupJustify_SpaceBetween
 
 data LineupDesc = LineupDesc
-   { lineupDesc_direction :: LineupDirection
-   , lineupDesc_justify   :: LineupJustify
-   }
-makeFieldsCustom ''LineupDesc
+   { field_direction :: LineupDirection
+   , field_justify   :: LineupJustify
+   } deriving (Generic)
 instance Default LineupDesc where
     def = LineupDesc
-        { lineupDesc_direction = LineupDirection_Vertical
-        , lineupDesc_justify   = LineupJustify_Start
+        { field_direction = LineupDirection_Vertical
+        , field_justify   = LineupJustify_Start
         }
 
 data TextAlign
@@ -123,17 +118,16 @@ data TextAlign
    | TextAlign_Justify
 
 data TextDesc = TextDesc
-   { textDesc_boxAlign      :: BoxAlign
-   , textDesc_textAlign     :: TextAlign
-   , textDesc_minLineHeight :: AbsoluteSize
-   }
-makeFieldsCustom ''TextDesc
+   { field_boxAlign      :: BoxAlign
+   , field_textAlign     :: TextAlign
+   , field_minLineHeight :: AbsoluteSize
+   } deriving (Generic)
 instance Default TextDesc where
     def = TextDesc
-        { textDesc_boxAlign      = Center
-        , textDesc_textAlign     = TextAlign_Left
-        -- , textDesc_textAlign     = TextAlign_Center
-        , textDesc_minLineHeight = 0
+        { field_boxAlign      = Center
+        , field_textAlign     = TextAlign_Left
+        -- , field_textAlign     = TextAlign_Center
+        , field_minLineHeight = 0
         }
 
 data RichText
@@ -180,18 +174,17 @@ pattern RichText_Image img = RichTextTree_Leaf $ RichTextValue_Image img
 -}
 
 data TextLayout = TextLayout
-   { textLayout_textAlign     :: TextAlign
-   , textLayout_size          :: Size AbsoluteSize
-   , textLayout_minLineHeight :: AbsoluteSize
-   , textLayout_content       :: [RichText]
-   }
-makeFieldsCustom ''TextLayout
+   { field_textAlign     :: TextAlign
+   , field_size          :: Size AbsoluteSize
+   , field_minLineHeight :: AbsoluteSize
+   , field_content       :: [RichText]
+   } deriving (Generic)
 instance Default TextLayout where
     def = TextLayout
-        { textLayout_textAlign     = TextAlign_Left
-        , textLayout_size          = def
-        , textLayout_minLineHeight = 0
-        , textLayout_content       = []
+        { field_textAlign     = TextAlign_Left
+        , field_size          = def
+        , field_minLineHeight = 0
+        , field_content       = []
         }
 
 --------------------------------------------------------------------------------

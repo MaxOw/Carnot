@@ -307,10 +307,10 @@ createTextureBuffer w h ptr = do
     glBindFramebuffer GL_FRAMEBUFFER noFramebuffer
 
     return $ TextureBuffer
-        { textureBuffer_framebuffer = fbuf
-        , textureBuffer_texture     = tex
-        , textureBuffer_width       = w
-        , textureBuffer_height      = h
+        { field_framebuffer = fbuf
+        , field_texture     = tex
+        , field_width       = w
+        , field_height      = h
         }
 
 withTextureBuffer :: MonadIO m => TextureBuffer -> m a -> m a

@@ -1,4 +1,3 @@
-{-# Language TemplateHaskell #-}
 module Engine.KDTree.Types where
 
 import Delude
@@ -13,12 +12,11 @@ data KDDim = KD_X | KD_Y
 instance NFData KDDim
 
 data KDNode t = KDNode
-   { kdNode_smaller  :: Maybe t
-   , kdNode_pivot    :: Float
-   , kdNode_greater  :: Maybe t
-   , kdNode_pivotDim :: KDDim
+   { field_smaller  :: Maybe t
+   , field_pivot    :: Float
+   , field_greater  :: Maybe t
+   , field_pivotDim :: KDDim
    } deriving (Generic)
-makeFieldsCustom ''KDNode
 instance NFData t => NFData (KDNode t)
 
 data KDTree a

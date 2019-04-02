@@ -1,4 +1,3 @@
-{-# Language TemplateHaskell #-}
 {-# Language StrictData #-}
 {-# Language PatternSynonyms #-}
 {-# OPTIONS_GHC -fno-warn-missing-pattern-synonym-signatures #-}
@@ -37,12 +36,11 @@ type GlyphFlags = FT_Int32
 --------------------------------------------------------------------------------
 
 data Glyph = Glyph
-   { glyph_buffer  :: TextureBuffer
-   , glyph_bearing :: V2 Int
-   , glyph_size    :: V2 Int
-   , glyph_advance :: Int
-   }
-makeFieldsCustom ''Glyph
+   { field_buffer  :: TextureBuffer
+   , field_bearing :: V2 Int
+   , field_size    :: V2 Int
+   , field_advance :: Int
+   } deriving (Generic)
 
 --------------------------------------------------------------------------------
 
@@ -52,90 +50,83 @@ data CharWithSize = CharWithSize Char FontSize deriving (Eq, Generic)
 instance Hashable CharWithSize
 
 data Font = Font
-   { font_ftFace    :: FT_Face
-   , font_deviceDPI :: DPI
-   , font_glyphsMap :: TVar (HashMap CharWithSize (Maybe Glyph))
-   }
-makeFieldsCustom ''Font
+   { field_ftFace    :: FT_Face
+   , field_deviceDPI :: DPI
+   , field_glyphsMap :: TVar (HashMap CharWithSize (Maybe Glyph))
+   } deriving (Generic)
 instance Eq  Font where (==)    a b = (==)    (a^.ftFace) (b^.ftFace)
 instance Ord Font where compare a b = compare (a^.ftFace) (b^.ftFace)
 
 type FontFamilyName = Text
 
 data FontFamilyWith a = FontFamily
-   { fontFamily_fontBase       :: a
-   , fontFamily_fontItalic     :: Maybe a
-   , fontFamily_fontBold       :: Maybe a
-   , fontFamily_fontBoldItalic :: Maybe a
-   }
-makeFieldsCustom ''FontFamilyWith
+   { field_fontBase       :: a
+   , field_fontItalic     :: Maybe a
+   , field_fontBold       :: Maybe a
+   , field_fontBoldItalic :: Maybe a
+   } deriving (Generic)
 instance Default a => Default (FontFamilyWith a) where
   def = FontFamily
-    { fontFamily_fontBase       = def
-    , fontFamily_fontItalic     = def
-    , fontFamily_fontBold       = def
-    , fontFamily_fontBoldItalic = def
+    { field_fontBase       = def
+    , field_fontItalic     = def
+    , field_fontBold       = def
+    , field_fontBoldItalic = def
     }
 
 type FontFamily     = FontFamilyWith Font
 type FontFamilyDesc = FontFamilyWith FilePath
 
 data GlyphKey = GlyphKey
-   { glyphKey_keyChar     :: Char
-   , glyphKey_keyFontSize :: FontSize
-   , glyphKey_keyBold     :: Bool
-   , glyphKey_keyItalic   :: Bool
+   { field_keyChar     :: Char
+   , field_keyFontSize :: FontSize
+   , field_keyBold     :: Bool
+   , field_keyItalic   :: Bool
    } deriving (Eq, Generic)
-makeFieldsCustom ''GlyphKey
 instance Hashable GlyphKey
 
 data FontHierarchy = FontHierarchy
-   { fontHierarchy_hierarchy :: [FontFamily]
-   , fontHierarchy_glyphsMap :: TVar (HashMap GlyphKey (Maybe Glyph))
-   }
-makeFieldsCustom ''FontHierarchy
+   { field_hierarchy :: [FontFamily]
+   , field_glyphsMap :: TVar (HashMap GlyphKey (Maybe Glyph))
+   } deriving (Generic)
 
 data FontMetrics = FontMetrics
-   { fontMetrics_verticalOffset  :: Int
-   , fontMetrics_lineHeight      :: Int
-   , fontMetrics_minSpaceAdvance :: Int
-   }
-makeFieldsCustom ''FontMetrics
+   { field_verticalOffset  :: Int
+   , field_lineHeight      :: Int
+   , field_minSpaceAdvance :: Int
+   } deriving (Generic)
 
 --------------------------------------------------------------------------------
 
 data FontsManager = FontsManager
-   { fontsManager_ftLib          :: FT_Library
-   , fontsManager_deviceDPI      :: DPI
-   , fontsManager_fontsMap       :: TVar (HashMap FontName Font)
-   , fontsManager_familiesMap    :: TVar (HashMap FontFamilyName FontFamily)
-   , fontsManager_hierarchiesMap :: TMVar (HashMap [FontFamilyName] FontHierarchy)
-   }
-makeFieldsCustom ''FontsManager
+   { field_ftLib          :: FT_Library
+   , field_deviceDPI      :: DPI
+   , field_fontsMap       :: TVar (HashMap FontName Font)
+   , field_familiesMap    :: TVar (HashMap FontFamilyName FontFamily)
+   , field_hierarchiesMap :: TMVar (HashMap [FontFamilyName] FontHierarchy)
+   } deriving (Generic)
 
 --------------------------------------------------------------------------------
 
 data FontStyleF a = FontStyle
-   { fontStyle_fonts         :: a -- [FontFamilyName] -- FontHierarchy
-   , fontStyle_fontSize      :: FontSize
-   , fontStyle_color         :: Color.AlphaColour Float
-   , fontStyle_bold          :: Bool
-   , fontStyle_italic        :: Bool
-   , fontStyle_underscore    :: Bool
-   , fontStyle_strikethrough :: Bool
-   }
-makeFieldsCustom ''FontStyleF
+   { field_fonts         :: a -- [FontFamilyName] -- FontHierarchy
+   , field_fontSize      :: FontSize
+   , field_color         :: Color.AlphaColour Float
+   , field_bold          :: Bool
+   , field_italic        :: Bool
+   , field_underscore    :: Bool
+   , field_strikethrough :: Bool
+   } deriving (Generic)
 
 -- makeFontStyle :: FontHierarchy -> FontSize -> FontStyle
 makeFontStyle :: a -> FontSize -> FontStyleF a
 makeFontStyle f fs = FontStyle
-   { fontStyle_fonts         = f
-   , fontStyle_fontSize      = fs
-   , fontStyle_color         = Color.opaque Color.black
-   , fontStyle_bold          = False
-   , fontStyle_italic        = False
-   , fontStyle_underscore    = False
-   , fontStyle_strikethrough = False
+   { field_fonts         = f
+   , field_fontSize      = fs
+   , field_color         = Color.opaque Color.black
+   , field_bold          = False
+   , field_italic        = False
+   , field_underscore    = False
+   , field_strikethrough = False
    }
 
 type FontStyle    = FontStyleF [FontFamilyName]

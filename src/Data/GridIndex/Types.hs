@@ -7,10 +7,9 @@ import Data.Array.IO (IOArray)
 import Engine.Common.Types
 
 data GridIndexConfig = GridIndexConfig
-   { gridIndexConfig_gridSize :: Size Int
-   , gridIndexConfig_cellSize :: Size Float
+   { field_gridSize :: Size Int
+   , field_cellSize :: Size Float
    } deriving (Eq, Show, Generic)
-makeFieldsCustom ''GridIndexConfig
 instance Default GridIndexConfig
 instance NFData GridIndexConfig
 

@@ -1,4 +1,3 @@
-{-# Language TemplateHaskell #-}
 {-# Language TypeFamilies #-}
 module Data.Collider.Types where
 
@@ -9,10 +8,9 @@ import Diagrams.Core.V
 import Diagrams.Core.Points
 
 data CircleDesc = CircleDesc
-   { _center :: Point V2 Float
-   , _radius :: Float
-   }
-makeLenses ''CircleDesc
+   { field_center :: Point V2 Float
+   , field_radius :: Float
+   } deriving (Generic)
 
 data CollisionShape
    = Circle CircleDesc

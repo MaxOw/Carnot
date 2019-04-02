@@ -1,4 +1,3 @@
-{-# Language TemplateHaskell #-}
 {-# Language ExistentialQuantification #-}
 {-# Language ConstraintKinds #-}
 {-# Language StrictData #-}
@@ -13,22 +12,20 @@ import Foreign.Storable.Generic
 import Engine.Backend.Types
 
 data AttribDesc = AttribDesc
-   { attribDesc_location :: GLuint
-   , attribDesc_enum     :: GLenum
-   , attribDesc_size     :: GLint
-   , attribDesc_count    :: GLint
-   } deriving Show
-makeFieldsCustom ''AttribDesc
+   { field_location :: GLuint
+   , field_enum     :: GLenum
+   , field_size     :: GLint
+   , field_count    :: GLint
+   } deriving (Generic, Show)
 
 type AttribOffset = GLint
 type StructSize   = GLint
 
 data ArrayBuffer a = ArrayBuffer
-   { arrayBuffer_buffer     :: Buffer
-   , arrayBuffer_structSize :: StructSize
-   , arrayBuffer_structDesc :: [AttribDesc]
-   }
-makeFieldsCustom ''ArrayBuffer
+   { field_buffer     :: Buffer
+   , field_structSize :: StructSize
+   , field_structDesc :: [AttribDesc]
+   } deriving (Generic)
 
 --------------------------------------------------------------------------------
 
@@ -81,13 +78,13 @@ class Storable x => ArrayBufferItem x where
     arrayBufferItemDesc :: proxy x -> [AttribDescProxy]
 
 data AtlasBatchItem = AtlasBatchItem
-   { atlasBatchItem_texCoord      :: V3 Float
-   , atlasBatchItem_color         :: V4 Float
-   , atlasBatchItem_modelX        :: V3 Float
-   , atlasBatchItem_modelY        :: V3 Float
-   , atlasBatchItem_radius        :: Float
-   , atlasBatchItem_colorMix      :: Float
-   , atlasBatchItem_customPageNum :: Float
+   { field_texCoord      :: V3 Float
+   , field_color         :: V4 Float
+   , field_modelX        :: V3 Float
+   , field_modelY        :: V3 Float
+   , field_radius        :: Float
+   , field_colorMix      :: Float
+   , field_customPageNum :: Float
    } deriving (Generic)
 
 instance GStorable AtlasBatchItem

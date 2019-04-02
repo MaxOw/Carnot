@@ -145,9 +145,9 @@ getLayoutSize = \case
 toSimpleBoxOpts
     :: Size AbsoluteSize -> Size AbsoluteSize -> BoxDesc -> SimpleBoxOpts
 toSimpleBoxOpts canvasSize containerSize desc = SimpleBoxOpts
-   { simpleBoxOpts_size   = absSize
-   , simpleBoxOpts_color  = desc^.color
-   , simpleBoxOpts_border = desc^.border
+   { field_size   = absSize
+   , field_color  = desc^.color
+   , field_border = desc^.border
    }
    where
    absSize = calcBoxSize canvasSize containerSize 1 $ desc^.size

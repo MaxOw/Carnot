@@ -23,9 +23,9 @@ createArrayBuffer program = do
     let ds = arrayBufferItemDesc p
     ss <- mapM (makeAttribDesc program) ds
     return $ ArrayBuffer
-        { arrayBuffer_buffer     = buf
-        , arrayBuffer_structSize = fromIntegral $ proxySizeOf p
-        , arrayBuffer_structDesc = ss
+        { field_buffer     = buf
+        , field_structSize = fromIntegral $ proxySizeOf p
+        , field_structDesc = ss
         }
 
 setArrayBufferData :: (Storable x, MonadIO m) => ArrayBuffer x -> Vector x -> m ()
@@ -57,7 +57,7 @@ bindBufferStruct buf ssize xs = do
 setVertexAttribPointer
     :: MonadIO m => AttribDesc -> StructSize -> AttribOffset -> m AttribOffset
 setVertexAttribPointer (AttribDesc loc aEnum aSize ct) fullSize off = do
-    let offsetPtr = plusPtr nullPtr $ fromIntegral off
+    let offsetPtr = plusPtr nullPtr $ fromIntegral off
     glEnableVertexAttribArray loc
     glVertexAttribPointer loc ct aEnum GL_FALSE fullSize offsetPtr
     let newOffset = off + aSize
@@ -67,10 +67,10 @@ makeAttribDesc :: MonadIO m => Program -> AttribDescProxy -> m AttribDesc
 makeAttribDesc program (Attrib n p) = do
     loc <- getAttribLocation program n
     return $ AttribDesc
-        { attribDesc_location = fromIntegral loc
-        , attribDesc_enum     = baseType_enum p
-        , attribDesc_size     = fromIntegral $ proxySizeOf p
-        , attribDesc_count    = baseType_count p
+        { field_location = fromIntegral loc
+        , field_enum     = baseType_enum p
+        , field_size     = fromIntegral $ proxySizeOf p
+        , field_count    = baseType_count p
         }
 
 proxySizeOf :: Storable x => proxy x -> Int

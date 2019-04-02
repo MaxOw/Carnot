@@ -1,4 +1,3 @@
-{-# Language TemplateHaskell #-}
 module Engine.Loop where
 
 import Protolude hiding (finally)

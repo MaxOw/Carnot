@@ -4,15 +4,15 @@ module Data.QuadTree.Types where
 import Delude
 
 data QuadTreeConfig = QuadTreeConfig
-   { quadTreeConfig_size          :: Float
-   , quadTreeConfig_minCellSize   :: Float
-   , quadTreeConfig_maxBucketSize :: Int
-   } deriving (Show)
+   { field_size          :: Float
+   , field_minCellSize   :: Float
+   , field_maxBucketSize :: Int
+   } deriving (Generic, Show)
 instance Default QuadTreeConfig where
     def = QuadTreeConfig
-        { quadTreeConfig_size          = 1
-        , quadTreeConfig_minCellSize   = 1
-        , quadTreeConfig_maxBucketSize = 1
+        { field_size          = 1
+        , field_minCellSize   = 1
+        , field_maxBucketSize = 1
         }
 
 data QuadTree a = QuadTree
@@ -39,6 +39,5 @@ instance Default a => Default (Quad a)
 
 --------------------------------------------------------------------------------
 
-makeFieldsCustom ''QuadTreeConfig
 makeLenses ''QuadTree
 makeLenses ''Quad

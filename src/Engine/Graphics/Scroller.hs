@@ -30,14 +30,14 @@ newScroller conf = do
     atlas <- use $ graphics.textureAtlas
     pid <- assignCustomPage atlas sb
     fmap Scroller . newIORef $ ScrollerState
-        { scrollerState_bufferMargin      = conf^.bufferMargin
-        , scrollerState_sourceBuffer      = sb
-        , scrollerState_targetBuffer      = tb
-        , scrollerState_atlasCustomPageId = pid
-        , scrollerState_drawScale         = 0
-        , scrollerState_position          = 0
-        , scrollerState_size  = Size (fromIntegral bw) (fromIntegral bh)
-        , scrollerState_valid = False
+        { field_bufferMargin      = conf^.bufferMargin
+        , field_sourceBuffer      = sb
+        , field_targetBuffer      = tb
+        , field_atlasCustomPageId = pid
+        , field_drawScale         = 0
+        , field_position          = 0
+        , field_size  = Size (fromIntegral bw) (fromIntegral bh)
+        , field_valid = False
         }
 
 updateScroller

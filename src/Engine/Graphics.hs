@@ -178,10 +178,10 @@ makeDrawCharStep fs char = do
         & T.translate (over each pointsToPixels $ glyph^.bearing)
 
     makeStep glyph = DrawCharStep
-        { drawCharStep_texture        = glyph^.buffer.texture
-        , drawCharStep_color          = fs^.color
-        , drawCharStep_modelTransform = makeTrans glyph
-        , drawCharStep_advance        = glyph^.advance
+        { field_texture        = glyph^.buffer.texture
+        , field_color          = fs^.color
+        , field_modelTransform = makeTrans glyph
+        , field_advance        = glyph^.advance
         }
 
 -- type Points = Int
@@ -273,8 +273,8 @@ makeRenderTextLayout t = do
             (t^.textAlign) (t^.size.width) (t^.size.height)
             (pointsToPixels lineheight) spaceAdv steps
     return $ RenderTextLayout
-        { renderTextLayout_size         = outputSize
-        , renderTextLayout_renderAction = vertOff vertoffset renderLines
+        { field_size         = outputSize
+        , field_renderAction = vertOff vertoffset renderLines
         }
     where
     vertOff v = T.translateY (pointsToPixels $ negate v)
@@ -313,7 +313,7 @@ makeRenderTextLayout t = do
 retriveHierarchy :: FontStyle -> Engine us FontStyleRes
 retriveHierarchy f = do
     h <- createFontHierarchy (f^.fonts)
-    return $ f { fontStyle_fonts = h }
+    return $ f { field_fonts = h }
 
 data DrawWordStep
    = DrawWord [DrawRichStep]
@@ -605,8 +605,8 @@ renderImg i = renderFromAtlas $ def
     & T.scaleX (realToFrac sw) -- (i^.size.width)  * realToFrac (i^.part.width))
     & T.scaleY (realToFrac sh) -- (i^.size.height) * realToFrac (i^.part.height))
     where
-    sw = fromMaybe (i^.size.width)  $ i^?part.traverse.width
-    sh = fromMaybe (i^.size.height) $ i^?part.traverse.height
+    sw = fromMaybe (i^.size.width)  $ i^?part.traverse.size.width
+    sh = fromMaybe (i^.size.height) $ i^?part.traverse.size.height
 
 renderSimpleText :: SimpleTextDesc -> Text -> RenderAction
 renderSimpleText = RenderSimpleText

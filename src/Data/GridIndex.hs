@@ -22,6 +22,14 @@ import Data.GridIndex.Types
 
 --------------------------------------------------------------------------------
 
+gridSize :: Lens' GridIndexConfig (Size Int)
+gridSize = field' @"field_gridSize"
+
+cellSize :: Lens' GridIndexConfig (Size Float)
+cellSize = field' @"field_cellSize"
+
+--------------------------------------------------------------------------------
+
 create :: MonadIO m => GridIndexConfig -> m (GridIndex a)
 create conf = do
     arr <- liftIO $ M.newArray gridRange mempty

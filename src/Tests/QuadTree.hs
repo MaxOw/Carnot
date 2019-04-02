@@ -11,7 +11,6 @@ import Test.Tasty.QuickCheck as QC
 import Tests.Utils
 -- import Engine.Common.Types
 import Data.QuadTree
-import Data.QuadTree.Types
 import qualified Data.QuadTree as QuadTree
 
 --------------------------------------------------------------------------------

@@ -11,7 +11,6 @@ module Engine.Context
     ) where
 
 import Delude
-import Control.Concurrent (threadDelay)
 import Prelude (String)
 import Data.Maybe (fromJust)
 import Control.Monad.IO.Class (MonadIO(..))

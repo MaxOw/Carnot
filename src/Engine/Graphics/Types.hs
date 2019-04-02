@@ -1,5 +1,5 @@
-{-# Language TemplateHaskell #-}
 -- {-# Language StrictData      #-}
+{-# Language TemplateHaskell #-}
 {-# Language PatternSynonyms #-}
 {-# Language TypeFamilies #-}
 module Engine.Graphics.Types
@@ -36,22 +36,21 @@ type AlphaColor = AlphaColour Float
 --------------------------------------------------------------------------------
 
 data Img = Img
-   { img_texture  :: Texture
-   , img_size     :: Size Int
-   , img_part     :: Maybe (Rect Int)
-   , img_zindex   :: Word32
-   , img_color    :: AlphaColor
-   , img_colorMix :: Float
-   }
-makeFieldsCustom ''Img
+   { field_texture  :: Texture
+   , field_size     :: Size Int
+   , field_part     :: Maybe (Rect Int)
+   , field_zindex   :: Word32
+   , field_color    :: AlphaColor
+   , field_colorMix :: Float
+   } deriving (Generic)
 instance Default Img where
     def = Img
-        { img_texture  = noTexture
-        , img_size     = pure 0
-        , img_part     = Nothing -- unitRect
-        , img_zindex   = 0
-        , img_color    = Color.transparent
-        , img_colorMix = 0
+        { field_texture  = noTexture
+        , field_size     = pure 0
+        , field_part     = Nothing -- unitRect
+        , field_zindex   = 0
+        , field_color    = Color.transparent
+        , field_colorMix = 0
         }
 
 mkImg :: Texture -> Size Int -> Img
@@ -66,18 +65,17 @@ data SimpleShape
 instance NFData SimpleShape
 
 data ShapeDesc = ShapeDesc
-   { shapeDesc_shapeType      :: SimpleShape
-   , shapeDesc_color          :: AlphaColor
-   , shapeDesc_modelTransform :: T2D
-   , shapeDesc_zindex         :: Word32
+   { field_shapeType      :: SimpleShape
+   , field_color          :: AlphaColor
+   , field_modelTransform :: T2D
+   , field_zindex         :: Word32
    } deriving (Generic)
-makeFieldsCustom ''ShapeDesc
 instance Default ShapeDesc where
     def = ShapeDesc
-        { shapeDesc_shapeType      = SimpleCircle
-        , shapeDesc_color          = Color.opaque Color.white
-        , shapeDesc_modelTransform = mempty -- Linear.identity
-        , shapeDesc_zindex         = 0
+        { field_shapeType      = SimpleCircle
+        , field_color          = Color.opaque Color.white
+        , field_modelTransform = mempty -- Linear.identity
+        , field_zindex         = 0
         }
 type instance N ShapeDesc = Float
 type instance V ShapeDesc = V2
@@ -88,14 +86,13 @@ instance Transformable ShapeDesc where
 
 {-
 data TextureDesc = TextureDesc
-   { textureDesc_textureId      :: Texture
-   , textureDesc_modelTransform :: T2D
+   { field_textureId      :: Texture
+   , field_modelTransform :: T2D
    } deriving (Generic)
-makeFieldsCustom ''TextureDesc
 instance Default TextureDesc where
     def = TextureDesc
-        { textureDesc_textureId      = 0 -- noTexture
-        , textureDesc_modelTransform = mempty
+        { field_textureId      = 0 -- noTexture
+        , field_modelTransform = mempty
         }
 type instance N TextureDesc = Float
 type instance V TextureDesc = V2
@@ -107,26 +104,25 @@ class BoundingPoints a where
     boundingPoints :: a -> [V2 Float]
 
 data AtlasDesc = AtlasDesc
-   { atlasDesc_textureId      :: Maybe Texture
-   , atlasDesc_color          :: AlphaColor
-   , atlasDesc_modelTransform :: T2D
-   , atlasDesc_radius         :: Float
-   , atlasDesc_colorMix       :: Float
-   , atlasDesc_zindex         :: Word32
-   , atlasDesc_part           :: Maybe (Rect Int)
-   , atlasDesc_customPage     :: Maybe (PageId, Rect Float)
+   { field_textureId      :: Maybe Texture
+   , field_color          :: AlphaColor
+   , field_modelTransform :: T2D
+   , field_radius         :: Float
+   , field_colorMix       :: Float
+   , field_zindex         :: Word32
+   , field_part           :: Maybe (Rect Int)
+   , field_customPage     :: Maybe (PageId, Rect Float)
    } deriving (Generic)
-makeFieldsCustom ''AtlasDesc
 instance Default AtlasDesc where
     def = AtlasDesc
-        { atlasDesc_textureId      = Nothing -- 0 -- noTexture
-        , atlasDesc_color          = Color.opaque Color.black
-        , atlasDesc_modelTransform = mempty
-        , atlasDesc_radius         = 2
-        , atlasDesc_colorMix       = 1
-        , atlasDesc_zindex         = 0
-        , atlasDesc_part           = Nothing -- unitRect
-        , atlasDesc_customPage     = Nothing
+        { field_textureId      = Nothing -- 0 -- noTexture
+        , field_color          = Color.opaque Color.black
+        , field_modelTransform = mempty
+        , field_radius         = 2
+        , field_colorMix       = 1
+        , field_zindex         = 0
+        , field_part           = Nothing -- unitRect
+        , field_customPage     = Nothing
         }
 type instance N AtlasDesc = Float
 type instance V AtlasDesc = V2
@@ -142,26 +138,25 @@ instance BoundingPoints AtlasDesc where
 --------------------------------------------------------------------------------
 
 data SimpleTextDesc = SimpleTextDesc
-   { simpleTextDesc_modelTransform :: T2D
-   , simpleTextDesc_zindex         :: Word32
-   , simpleTextDesc_fontName       :: Maybe FontName
-   , simpleTextDesc_fontSize       :: Maybe FontSize
-   , simpleTextDesc_color          :: AlphaColor
-   , simpleTextDesc_boxAlign       :: BoxAlign
+   { field_modelTransform :: T2D
+   , field_zindex         :: Word32
+   , field_fontName       :: Maybe FontName
+   , field_fontSize       :: Maybe FontSize
+   , field_color          :: AlphaColor
+   , field_boxAlign       :: BoxAlign
    } deriving (Generic)
-makeFieldsCustom ''SimpleTextDesc
 type instance N SimpleTextDesc = Float
 type instance V SimpleTextDesc = V2
 instance Transformable SimpleTextDesc where
     transform t = over modelTransform (t <>)
 instance Default SimpleTextDesc where
     def = SimpleTextDesc
-        { simpleTextDesc_modelTransform = mempty
-        , simpleTextDesc_zindex         = 0
-        , simpleTextDesc_fontName       = Nothing
-        , simpleTextDesc_fontSize       = Nothing
-        , simpleTextDesc_color          = Color.opaque Color.black
-        , simpleTextDesc_boxAlign       = Center
+        { field_modelTransform = mempty
+        , field_zindex         = 0
+        , field_fontName       = Nothing
+        , field_fontSize       = Nothing
+        , field_color          = Color.opaque Color.black
+        , field_boxAlign       = Center
         }
 
 --------------------------------------------------------------------------------
@@ -220,21 +215,19 @@ instance BoundingPoints RenderAction where
 --------------------------------------------------------------------------------
 
 data DrawCharStep = DrawCharStep
-   { drawCharStep_texture        :: Texture
-   , drawCharStep_color          :: AlphaColor
-   , drawCharStep_modelTransform :: T2D
-   , drawCharStep_advance        :: Int
-   }
-makeFieldsCustom ''DrawCharStep
+   { field_texture        :: Texture
+   , field_color          :: AlphaColor
+   , field_modelTransform :: T2D
+   , field_advance        :: Int
+   } deriving (Generic)
 
 -- pattern RenderNothing :: RenderAction
 -- pattern RenderNothing = RenderComposition m []
 
 data RenderTextLayout = RenderTextLayout
-   { renderTextLayout_size         :: Size AbsoluteSize
-   , renderTextLayout_renderAction :: RenderAction
-   }
-makeFieldsCustom ''RenderTextLayout
+   { field_size         :: Size AbsoluteSize
+   , field_renderAction :: RenderAction
+   } deriving (Generic)
 
 --------------------------------------------------------------------------------
 
@@ -248,16 +241,15 @@ pattern Height = OrthoNorm_Height
 pattern Both   = OrthoNorm_Both
 
 data OrthoProjectionOpts = OrthoProjectionOpts
-   { orthoProjectionOpts_boxAlign      :: BoxAlign
-   , orthoProjectionOpts_normalization :: Maybe OrthoNorm
-   , orthoProjectionOpts_scale         :: Float
-   }
-makeFieldsCustom ''OrthoProjectionOpts
+   { field_boxAlign      :: BoxAlign
+   , field_normalization :: Maybe OrthoNorm
+   , field_scale         :: Float
+   } deriving (Generic)
 instance Default OrthoProjectionOpts where
     def = OrthoProjectionOpts
-        { orthoProjectionOpts_boxAlign      = Center
-        , orthoProjectionOpts_normalization = Nothing
-        , orthoProjectionOpts_scale         = 1.0
+        { field_boxAlign      = Center
+        , field_normalization = Nothing
+        , field_scale         = 1.0
         }
 
 

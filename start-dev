@@ -1,6 +1,8 @@
-# ghcid --command "cabal repl lib:Carnot"
-cabal configure -fbuild-example
-ghcid --command "cabal repl exe:Carnot" --test "main" -W
+ghcid --command "cabal repl lib:Carnot"
+
+# cabal configure -fbuild-example
+# ghcid --command "cabal repl exe:Carnot" --test "main" -W
+
 # ghcid --command "cabal repl lib:Carnot" --test "Tests.runTests" -W
 
 # --test "main" -W

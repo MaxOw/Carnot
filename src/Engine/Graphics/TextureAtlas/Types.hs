@@ -33,52 +33,48 @@ data SlotSize
    deriving (Eq, Ord, Show, Enum, Bounded)
 
 data AtlasLayout a = AtlasLayout
-   { atlasLayout_topSlotSize :: SlotSize
-   , atlasLayout_quadTree    :: QuadTree a
-   }
-makeFieldsCustom ''AtlasLayout
+   { field_topSlotSize :: SlotSize
+   , field_quadTree    :: QuadTree a
+   } deriving (Generic)
 
 type QuadPath = Seq QuadName
 
 --------------------------------------------------------------------------------
 
 data AtlasPage = AtlasPage
-   { atlasPage_buffer :: TextureBuffer
-   , atlasPage_slots  :: AtlasLayout ()
-   }
-makeFieldsCustom ''AtlasPage
+   { field_buffer :: TextureBuffer
+   , field_slots  :: AtlasLayout ()
+   } deriving (Generic)
 
 type AtlasPages = Vector AtlasPage
 
 data AtlasLocation = AtlasLocation
-   { atlasLocation_page      :: Int
-   , atlasLocation_offset    :: V2 Int
-   , atlasLocation_size      :: V2 Int
-   -- , atlasLocation_texCoords :: Rect Float -- [V2 Float]
-   } deriving (Show)
-makeFieldsCustom ''AtlasLocation
+   { field_page      :: Int
+   , field_offset    :: V2 Int
+   , field_size      :: V2 Int
+   -- , field_texCoords :: Rect Float -- [V2 Float]
+   } deriving (Generic, Show)
 
 emptyAtlasLocation :: AtlasLocation
 emptyAtlasLocation = AtlasLocation
-    { atlasLocation_page      = 0
-    , atlasLocation_offset    = 0
-    , atlasLocation_size      = 0
-    -- , atlasLocation_texCoords = unitRect
+    { field_page      = 0
+    , field_offset    = 0
+    , field_size      = 0
+    -- , field_texCoords = unitRect
     }
 
 data AtlasTask
    = TaskAddTexture AtlasLocation TextureBuffer
 
 data TextureAtlas  = TextureAtlas
-   { textureAtlas_maxTextureUnits :: GLint
-   , textureAtlas_maxTextureSize  :: GLint
-   , textureAtlas_atlasMap        :: IORef (HashMap Texture AtlasLocation)
-   , textureAtlas_primaryPages    :: IORef AtlasPages
-   -- , textureAtlas_secondaryPages  :: IORef AtlasPages
-   , textureAtlas_customPages     :: IORef (Vector TextureBuffer)
-   , textureAtlas_tasks           :: TChan AtlasTask
-   }
-makeFieldsCustom ''TextureAtlas
+   { field_maxTextureUnits :: GLint
+   , field_maxTextureSize  :: GLint
+   , field_atlasMap        :: IORef (HashMap Texture AtlasLocation)
+   , field_primaryPages    :: IORef AtlasPages
+   -- , field_secondaryPages  :: IORef AtlasPages
+   , field_customPages     :: IORef (Vector TextureBuffer)
+   , field_tasks           :: TChan AtlasTask
+   } deriving (Generic)
 
 newtype PageId = PageId { unPageId :: Int }
 makeWrapped ''PageId

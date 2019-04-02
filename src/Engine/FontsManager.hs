@@ -1,4 +1,3 @@
-{-# Language TemplateHaskell #-}
 {-# Language StrictData #-}
 module Engine.FontsManager
     ( module Engine.FontsManager.Types
@@ -49,9 +48,9 @@ getFontMetrics font fsize = do
     -- let desc = fromIntegral . abs $ SizeMetrics.descender sizeMetrics
     let maxAdv = fromIntegral $ SizeMetrics.max_advance sizeMetrics
     return $ FontMetrics
-        { fontMetrics_verticalOffset  = asc -- yMax
-        , fontMetrics_lineHeight      = faceHeight
-        , fontMetrics_minSpaceAdvance = fromMaybe maxAdv mSpaceAdv
+        { field_verticalOffset  = asc -- yMax
+        , field_lineHeight      = faceHeight
+        , field_minSpaceAdvance = fromMaybe maxAdv mSpaceAdv
         }
 
 -- We should be probably also caching failures here in glyphsMap, that is to
@@ -96,10 +95,10 @@ font_loadGlyph font fsize char =
             caseJust mImg $ \img -> do
                 buff <- createTextureBufferFrom img
                 return $ Just $ Glyph
-                    { glyph_buffer  = buff
-                    , glyph_bearing = over each fromIntegral bear
-                    , glyph_size    = over each fromIntegral gsiz
-                    , glyph_advance = adv
+                    { field_buffer  = buff
+                    , field_bearing = over each fromIntegral bear
+                    , field_size    = over each fromIntegral gsiz
+                    , field_advance = adv
                     }
 
 hierarchy_loadGlyph :: MonadIO m => FontHierarchy -> GlyphKey -> m (Maybe Glyph)
@@ -131,11 +130,11 @@ initFontsManager mDPI = do
     familiesMapVar <- newTVarIO mempty
     hierarchiesMapVar <- atomically $ newTMVar mempty
     return $ FontsManager
-        { fontsManager_ftLib          = lib
-        , fontsManager_deviceDPI      = fromMaybe 72 mDPI
-        , fontsManager_fontsMap       = fontsMapVar
-        , fontsManager_familiesMap    = familiesMapVar
-        , fontsManager_hierarchiesMap = hierarchiesMapVar
+        { field_ftLib          = lib
+        , field_deviceDPI      = fromMaybe 72 mDPI
+        , field_fontsMap       = fontsMapVar
+        , field_familiesMap    = familiesMapVar
+        , field_hierarchiesMap = hierarchiesMapVar
         }
 
 managerLoadFont :: MonadIO m
@@ -151,9 +150,9 @@ managerLoadFont manager name path =
     makeFont face = do
         fontGlyphsMap <- newTVarIO mempty
         return $ Font
-            { font_ftFace    = face
-            , font_deviceDPI = manager^.deviceDPI
-            , font_glyphsMap = fontGlyphsMap
+            { field_ftFace    = face
+            , field_deviceDPI = manager^.deviceDPI
+            , field_glyphsMap = fontGlyphsMap
             }
 
 releaseFont :: MonadIO m => Font -> m ()
