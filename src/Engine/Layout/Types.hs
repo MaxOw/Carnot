@@ -81,9 +81,9 @@ data LineupDirection
    = LineupDirection_Vertical
    | LineupDirection_Horizontal
 
-instance HasPatternVertical LineupDirection where
+instance HasPatternVertical LineupDirection where
     _PatternVertical = LineupDirection_Vertical
-instance HasPatternHorizontal LineupDirection where
+instance HasPatternHorizontal LineupDirection where
     _PatternHorizontal = LineupDirection_Horizontal
 
 data LineupJustify
@@ -92,13 +92,13 @@ data LineupJustify
    | LineupJustify_Center
    | LineupJustify_SpaceBetween
 
-instance HasPatternStart LineupJustify where
+instance HasPatternStart LineupJustify where
     _PatternStart = LineupJustify_Start
-instance HasPatternEnd LineupJustify where
+instance HasPatternEnd LineupJustify where
     _PatternEnd = LineupJustify_End
-instance HasPatternCenter LineupJustify where
+instance HasPatternCenter LineupJustify where
     _PatternCenter = LineupJustify_Center
-instance HasPatternSpaceBetween LineupJustify where
+instance HasPatternSpaceBetween LineupJustify where
     _PatternSpaceBetween = LineupJustify_SpaceBetween
 
 data LineupDesc = LineupDesc

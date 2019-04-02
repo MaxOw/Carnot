@@ -169,31 +169,31 @@ pattern BoxAlign_BottomRight  = BoxAlign Align_Bottom Align_Right
 pattern BoxAlign_Middle = BoxAlign Align_Middle Align_Center
 pattern BoxAlign_Center = BoxAlign Align_Middle Align_Center
 
-instance HasPatternTopLeft BoxAlign where
+instance HasPatternTopLeft BoxAlign where
     _PatternTopLeft = BoxAlign_TopLeft
 instance HasPatternTopCenter BoxAlign where
     _PatternTopCenter = BoxAlign_TopCenter
 instance HasPatternTopRight BoxAlign where
     _PatternTopRight = BoxAlign_TopRight
-instance HasPatternMiddleLeft BoxAlign where
+instance HasPatternMiddleLeft BoxAlign where
     _PatternMiddleLeft = BoxAlign_MiddleLeft
 instance HasPatternMiddleCenter BoxAlign where
     _PatternMiddleCenter = BoxAlign_MiddleCenter
 instance HasPatternMiddleRight BoxAlign where
     _PatternMiddleRight = BoxAlign_MiddleRight
-instance HasPatternBottomLeft BoxAlign where
+instance HasPatternBottomLeft BoxAlign where
     _PatternBottomLeft = BoxAlign_BottomLeft
 instance HasPatternBottomCenter BoxAlign where
     _PatternBottomCenter = BoxAlign_BottomCenter
 instance HasPatternBottomRight BoxAlign where
     _PatternBottomRight = BoxAlign_BottomRight
-instance HasPatternCenter BoxAlign where
+instance HasPatternCenter BoxAlign where
     _PatternCenter = BoxAlign_Center
 
 {-
-instance HasPatternLeft HorizontalAlign where
+instance HasPatternLeft HorizontalAlign where
     _PatternLeft = AlignLeft
-instance HasPatternRight HorizontalAlign where
+instance HasPatternRight HorizontalAlign where
     _PatternRight = AlignRight
 -}
 

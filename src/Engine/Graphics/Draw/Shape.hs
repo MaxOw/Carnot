@@ -57,7 +57,7 @@ initDrawShapes = do
             setBufferData colorBuffer    GL_ARRAY_BUFFER (cs   :: [Float])
             setBufferData modelXBuffer   GL_ARRAY_BUFFER (mxs  :: [Float])
             setBufferData modelYBuffer   GL_ARRAY_BUFFER (mys  :: [Float])
-            -- glDrawArrays GL_TRIANGLE_FAN 0 (fromIntegral ct)
+            -- glDrawArrays GL_TRIANGLE_FAN 0 (fromIntegral ct)
             let count = fromIntegral $ ct * 6
             glBindBuffer GL_ELEMENT_ARRAY_BUFFER indecesBuffer
             glDrawElements GL_TRIANGLES count GL_UNSIGNED_INT nullPtr

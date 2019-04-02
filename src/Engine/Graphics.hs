@@ -299,7 +299,7 @@ makeRenderTextLayout t = do
             catMaybes <$> (mapM (toDrawChar fh) $ toString x)
         RichText_Image img  -> return [DrawRichImg (img^.texture) imgAdv]
             where -- TODO: fix this!
-            imgAdv = pixelsToPoints $ fromIntegral $ img^.size.width
+            imgAdv = pixelsToPoints $ fromIntegral $ img^.size.width
 
     -- toDrawChar :: FontStyle -> Char -> DrawRichStep
     toDrawChar fs c
@@ -344,7 +344,7 @@ renderRichSteps
         []     -> pure 0
         (l:[]) -> Size (calcLineLength l) layoutLineHeight
         -- (l:[]) -> Size layoutWidth layoutLineHeight
-        _      -> Size layoutWidth (fromIntegral plen * layoutLineHeight)
+        _      -> Size layoutWidth (fromIntegral plen * layoutLineHeight)
 
     properLines = concatMap splitBaseLine baseLines
     baseLines = splitStepsByNewline steps
@@ -425,7 +425,7 @@ renderRichSteps
 
     calcLineLength :: DrawLineStep -> AbsoluteSize
     calcLineLength (DrawLineFull _ ws) =
-        pointsToPixels $ sum $ map wordAdvance $ trimWords ws
+        pointsToPixels $ sum $ map wordAdvance $ trimWords ws
 
     trimWords = dropWhileEnd isDrawWordSpace . dropWhile isDrawWordSpace
 
@@ -440,7 +440,7 @@ renderRichSteps
         where
         wsTrimmed  = trimWords ws
         leftover   = layoutWidth - lineLength
-        lineLength = pointsToPixels $ sum $ map wordAdvance wsTrimmed
+        lineLength = pointsToPixels $ sum $ map wordAdvance wsTrimmed
         renderDef  = renderWords spaceAdv wsTrimmed
         distrSpace = spaceAdv
                    + pixelsToPoints (divf leftover (countSpaces wsTrimmed))

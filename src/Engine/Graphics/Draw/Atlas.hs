@@ -67,7 +67,7 @@ makeAtlasTexCoords atlas loc mpart = rectToList $ convRect $ case mpart of
     maxTexSize = fromIntegral $ atlas^.maxTextureSize
     convRect r = Rect vo (MkSize vs)
         where
-        vo = ((fromIntegral <$> r^.offset)        + 0.5) ^/ maxTexSize
+        vo = ((fromIntegral <$> r^.offset)        + 0.5) ^/ maxTexSize
         vs = ((fromIntegral <$> r^.size._Wrapped) - 1.0) ^/ maxTexSize
 
 --------------------------------------------------------------------------------
@@ -101,7 +101,7 @@ initDrawAtlas = do
           let bs = chunksOf (maxBatchSize*4) bis
           forM_ bs $ \batch -> do
             let vec = Vector.fromList batch
-            let elemCount = fromIntegral $ 6 * div (Vector.length vec) 4
+            let elemCount = fromIntegral $ 6 * div (Vector.length vec) 4
             setArrayBufferData arrayBuffer vec
             glBindBuffer GL_ELEMENT_ARRAY_BUFFER indecesBuffer
             glDrawElements GL_TRIANGLES elemCount GL_UNSIGNED_INT nullPtr

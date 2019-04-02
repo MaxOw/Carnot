@@ -177,7 +177,7 @@ updateListGridIndex vs g = g
     & grid    %~ updateArraySets adds dels
     & gridMap %~ HashMap.union (HashMap.fromList $ map f vs)
     where
-    f (bb, a) = (a, bboxToRange $ bboxToGridBBox g bb)
+    f (bb, a) = (a, bboxToRange $ bboxToGridBBox g bb)
     news = makeChangeMap $ map nfs vs
     nfs (bb, a) = (bboxToRange $ bboxToGridBBox g bb, GridIndexEntry bb a)
     olds = makeChangeMap $ mapMaybe ofs vs

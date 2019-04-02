@@ -286,7 +286,7 @@ makeTexCoords :: SlotSize -> V2 Int -> V2 Int -> Rect Float
 makeTexCoords maxSlotSize locOffset locSize = Rect vo (MkSize vs)
     where
     ss = fromIntegral (fromSlotSize maxSlotSize :: Int)
-    vo = ((fromIntegral <$> locOffset) + 0.5) ^/ ss
+    vo = ((fromIntegral <$> locOffset) + 0.5) ^/ ss
     vs = ((fromIntegral <$> locSize)   - 1.0) ^/ ss
 -}
 
