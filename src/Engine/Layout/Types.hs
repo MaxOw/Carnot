@@ -22,31 +22,6 @@ instance Default BorderDesc where
         , field_color = Color.opaque Color.black
         }
 
-data BoxEdges a = BoxEdges
-   { field_top    :: a
-   , field_left   :: a
-   , field_bottom :: a
-   , field_right  :: a
-   } deriving (Generic, Functor, Foldable, Traversable)
-instance Default a => Default (BoxEdges a) where
-    def = BoxEdges
-        { field_top    = def
-        , field_left   = def
-        , field_bottom = def
-        , field_right  = def
-        }
-
-instance Each (BoxEdges a) (BoxEdges b) a b where
-    each f (BoxEdges a b c d) = BoxEdges <$> f a <*> f b <*> f c <*> f d
-
-traverseVertical :: Traversal' (BoxEdges a) a
-traverseVertical f (BoxEdges a b c d) = BoxEdges
-    <$> pure a <*> f b <*> pure c <*> f d
-
-traverseHorizontal :: Traversal' (BoxEdges a) a
-traverseHorizontal f (BoxEdges a b c d) = BoxEdges
-    <$> f a <*> pure b <*> f c <*> pure d
-
 --------------------------------------------------------------------------------
 
 data BoxDesc = BoxDesc
@@ -56,6 +31,7 @@ data BoxDesc = BoxDesc
    , field_color    :: AlphaColor
    , field_border   :: BoxEdges BorderDesc
    } deriving (Generic)
+instance HasSize BoxDesc (Size Sizing)
 instance Default BoxDesc where
     def = BoxDesc
         { field_boxAlign = Center
@@ -70,21 +46,13 @@ data SimpleBoxOpts = SimpleBoxOpts
    , field_color  :: AlphaColor
    , field_border :: BoxEdges BorderDesc
    } deriving (Generic)
+instance HasSize SimpleBoxOpts (Size AbsoluteSize)
 instance Default SimpleBoxOpts where
     def = SimpleBoxOpts
         { field_size   = def
         , field_color  = Color.transparent
         , field_border = def
         }
-
-data LineupDirection
-   = LineupDirection_Vertical
-   | LineupDirection_Horizontal
-
-instance HasPatternVertical LineupDirection where
-    _PatternVertical = LineupDirection_Vertical
-instance HasPatternHorizontal LineupDirection where
-    _PatternHorizontal = LineupDirection_Horizontal
 
 data LineupJustify
    = LineupJustify_Start
@@ -179,6 +147,7 @@ data TextLayout = TextLayout
    , field_minLineHeight :: AbsoluteSize
    , field_content       :: [RichText]
    } deriving (Generic)
+instance HasSize TextLayout (Size AbsoluteSize)
 instance Default TextLayout where
     def = TextLayout
         { field_textAlign     = TextAlign_Left

@@ -41,6 +41,7 @@ data Glyph = Glyph
    , field_size    :: V2 Int
    , field_advance :: Int
    } deriving (Generic)
+instance HasSize Glyph (V2 Int)
 
 --------------------------------------------------------------------------------
 

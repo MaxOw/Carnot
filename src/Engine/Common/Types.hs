@@ -39,6 +39,56 @@ instance Default Sizing where def = Sizing_Absolute 0
 
 --------------------------------------------------------------------------------
 
+data LineupDirection
+   = LineupDirection_Vertical
+   | LineupDirection_Horizontal
+
+instance HasPatternVertical LineupDirection where
+    _PatternVertical = LineupDirection_Vertical
+instance HasPatternHorizontal LineupDirection where
+    _PatternHorizontal = LineupDirection_Horizontal
+
+--------------------------------------------------------------------------------
+
+data BoxEdges a = BoxEdges
+   { field_top    :: a
+   , field_left   :: a
+   , field_bottom :: a
+   , field_right  :: a
+   } deriving (Generic, Functor, Foldable, Traversable)
+instance Default a => Default (BoxEdges a) where
+    def = BoxEdges
+        { field_top    = def
+        , field_left   = def
+        , field_bottom = def
+        , field_right  = def
+        }
+instance Applicative BoxEdges where
+    pure x = BoxEdges x x x x
+    BoxEdges fa fb fc fd <*> BoxEdges a b c d
+        = BoxEdges (fa a) (fb b) (fc c) (fd d)
+instance Num a => Num (BoxEdges a) where
+    (+) = liftA2 (+)
+    (*) = liftA2 (*)
+    (-) = liftA2 (-)
+    abs = fmap abs
+    signum = fmap signum
+    negate = fmap negate
+    fromInteger = pure . fromInteger
+
+instance Each (BoxEdges a) (BoxEdges b) a b where
+    each f (BoxEdges a b c d) = BoxEdges <$> f a <*> f b <*> f c <*> f d
+
+traverseVertical :: Traversal' (BoxEdges a) a
+traverseVertical f (BoxEdges a b c d) = BoxEdges
+    <$> pure a <*> f b <*> pure c <*> f d
+
+traverseHorizontal :: Traversal' (BoxEdges a) a
+traverseHorizontal f (BoxEdges a b c d) = BoxEdges
+    <$> f a <*> pure b <*> f c <*> pure d
+
+--------------------------------------------------------------------------------
+
 newtype Size a = MkSize (V2 a) deriving
     ( Eq, Ord, Num, Functor, Applicative, Traversable
     , Foldable, Show, Generic, NFData, Fractional)
@@ -53,12 +103,16 @@ instance HasWidth  (Size a) a where width  = _Wrapped._x
 instance HasHeight (Size a) a where height = _Wrapped._y
 instance Default a => Default (Size a) where def = Size def def
 
+instance Each (Size a) (Size b) a b where
+    each f (Size a b) = Size <$> f a <*> f b
+
 --------------------------------------------------------------------------------
 
 data Rect x = Rect
    { field_offset :: V2 x
    , field_size   :: Size x
-   } deriving (Generic, Show)
+   } deriving (Generic, Show, Functor)
+instance HasSize (Rect x) (Size x)
 instance R1 Rect where _x  = offset._x
 instance R2 Rect where _xy = offset._xy
 instance HasWidth  (Rect a) a where width  = size.width

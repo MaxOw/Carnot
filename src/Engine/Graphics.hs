@@ -4,6 +4,8 @@ module Engine.Graphics
     , initGraphics
     , draw
     , drawBatch
+    , fitViewport
+    , clearColorWhite, clearColorBlack
     , swapBuffers
     , orthoProjection, orthoProjectionFor
     , positionToViewMatrix
@@ -22,6 +24,8 @@ module Engine.Graphics
     -- , makeRenderChar
     -- , makeRenderText
     , makeRenderTextLayout
+    , makeRenderTextLine
+    , makeRenderText
 
     , updateZIndex, setZIndex, setZIndexAtLeast, setZIndexAtMost
 
@@ -34,6 +38,7 @@ module Engine.Graphics
     , renderActionBBox
 
     , loadTextureToAtlas
+    , addImageToAtlas
     , renderImg
     ) where
 
@@ -44,6 +49,7 @@ import qualified Data.Char as Char
 import qualified Data.List as List
 -- import qualified Data.Vector.Algorithms.Intro as M
 -- import qualified Data.Vector.Mutable as M
+import Graphics.GL
 
 import Diagrams.Core (InSpace, Transformable)
 import qualified Diagrams.Transform as T
@@ -61,7 +67,7 @@ import qualified Engine.Context as Context
 import Engine.Types
 import Engine.Context (Context)
 import Engine.Graphics.Utils (loadImageSync, createTextureBufferFrom, mkMatHomo2)
-import Codec.Picture (Image(..), convertRGBA8)
+import Codec.Picture (DynamicImage, Image(..), convertRGBA8)
 
 --------------------------------------------------------------------------------
 
@@ -123,27 +129,19 @@ drawBatch projMatrix batch = do
 
 loadTextureToAtlas :: FilePath -> Engine us (Maybe Img)
 loadTextureToAtlas path = do
-    atlas <- use $ graphics.textureAtlas
-    -- mTex <- loadTexture path
     mImg <- loadImageSync path
     case mImg of
         Nothing  -> return Nothing
-        Just img -> do
-            buf <- createTextureBufferFrom img
-            Atlas.addTexture atlas buf
-            let (Image w h _) = convertRGBA8 img
-            -- deleteTextureBuffer buf
-            let tex = buf^.texture
-            return (Just $ mkImg tex (Size w h))
+        Just img -> Just <$> addImageToAtlas img
 
-{-
-loadTexture :: MonadIO m => FilePath -> m (Maybe Texture)
-loadTexture path = do
-    mImg <- loadImageSync path
-    case mImg of
-        Nothing  -> return Nothing
-        Just img -> return . Just =<< createTexture2d img
--}
+addImageToAtlas :: DynamicImage -> Engine us Img
+addImageToAtlas img = do
+    atlas <- use $ graphics.textureAtlas
+    buf <- createTextureBufferFrom img
+    Atlas.addTexture atlas buf
+    let (Image w h _) = convertRGBA8 img
+    let tex = buf^.texture
+    return $ mkImg tex (Size w h)
 
 loadFont :: FontName -> FilePath -> Engine us (Maybe Font)
 loadFont fname path = do
@@ -203,19 +201,38 @@ makeRenderSimpleText d text = do
     T.transform (d^.modelTransform) . setZIndexAtLeast (d^.zindex)
         <$> makeRenderText (d^.boxAlign) ff text
 
+data TextLineDesc = TextLineDesc
+   { field_size            :: Size Float
+   , field_verticalOffset  :: Float
+   , field_minSpaceAdvance :: Float
+   } deriving (Generic)
+instance Default TextLineDesc
+instance HasSize TextLineDesc (Size Float)
+
 makeRenderText :: BoxAlign -> FontStyle -> Text -> Engine us RenderAction
-makeRenderText align fs text = do
+makeRenderText align fs text = snd <$> makeRenderTextLine align fs text
+
+makeRenderTextLine
+    :: BoxAlign -> FontStyle -> Text -> Engine us (TextLineDesc, RenderAction)
+makeRenderTextLine align fs text = do
     fh  <- retriveHierarchy fs
     case getPrimaryFont (fh^.fonts) (fs^.bold) (fs^.italic) of
         Just f -> do
             m   <- getFontMetrics f (fs^.fontSize)
             dws <- mapM (toDrawCharList fh . toString) $ words text
             let s = fmap pointsToPixels $ Size (calcWidth m dws) (m^.lineHeight)
-            return $ transformBoxAlign s align $ vertOff m
-                   $ renderComposition $ concat $ go m 0 dws
-        Nothing -> return mempty
+            let rend = transformBoxAlign s align $ vertOff m
+                     $ renderComposition $ concat $ go m 0 dws
+            let spaceAdv = pointsToPixels $ view minSpaceAdvance m
+            let desc = def & size            .~ s
+                           & verticalOffset  .~ vertOffPx m
+                           & minSpaceAdvance .~ spaceAdv
+            return (desc, rend)
+        Nothing -> return (def, mempty)
+        -- Nothing -> return mempty
     where
-    vertOff m = T.translateY (pointsToPixels $ negate $ m^.verticalOffset)
+    vertOffPx m = pointsToPixels $ m^.verticalOffset
+    vertOff m = T.translateY (negate $ vertOffPx m)
     toDrawCharList fh = fmap catMaybes . mapM (makeDrawCharStep fh)
 
     go _ _       []  = []
@@ -500,6 +517,21 @@ makeRenderChar fs char = do
 fullyUpdateAtlas :: Engine us ()
 fullyUpdateAtlas = Atlas.fullUpdate =<< use (graphics.textureAtlas)
 
+fitViewport :: Engine us ()
+fitViewport = do
+    (w, h) <- Context.getFramebufferSize =<< use (graphics.context)
+    glViewport 0 0 (fromIntegral w) (fromIntegral h)
+
+clearColorWhite :: Engine us ()
+clearColorWhite = do
+    glClearColor 1 1 1 0
+    glClear GL_COLOR_BUFFER_BIT
+
+clearColorBlack :: Engine us ()
+clearColorBlack = do
+    glClearColor 0 0 0 0
+    glClear GL_COLOR_BUFFER_BIT
+
 swapBuffers :: Engine us ()
 swapBuffers = Context.swapBuffers =<< use (graphics.context)
 
@@ -538,9 +570,9 @@ orthoProjectionFor (Size sw sh) opts
         where a = x / opts^.scale
 
     vert x = case opts^.boxAlign.vertical of
-        Align_Top    -> ( 0  , b  )
+        Align_Top    -> (-b  , 0  )
         Align_Middle -> (-b/2, b/2)
-        Align_Bottom -> (-b  , 0  )
+        Align_Bottom -> ( 0  , b  )
         where b = x / opts^.scale
 
 --------------------------------------------------------------------------------

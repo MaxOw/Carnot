@@ -31,6 +31,7 @@ data ScrollerState = ScrollerState
    , field_size              :: Size Float
    , field_valid             :: Bool
    } deriving (Generic)
+instance HasSize ScrollerState (Size Float)
 
 newtype Scroller = Scroller { unScroller :: IORef ScrollerState }
 makeWrapped ''Scroller

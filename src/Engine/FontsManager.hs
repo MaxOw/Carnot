@@ -38,6 +38,11 @@ import Engine.Graphics.Utils
 
 getFontMetrics :: MonadIO m => Font -> FontSize -> m FontMetrics
 getFontMetrics font fsize = do
+    let dpi  = fromIntegral $ font^.deviceDPI
+    let fs   = fromIntegral fsize * 64
+    let face = font^.ftFace
+    assertFreeType_ $ ft_Set_Char_Size face 0 fs 0 dpi
+
     mSpaceAdv <- fmap (view advance) <$> font_loadGlyph font fsize ' '
     faceSize <- liftIO $ peek $ Face.size (font^.ftFace)
     -- bbox <- liftIO $ peek $ Face.bbox (font^.ftFace)

@@ -10,6 +10,8 @@ import Engine.Layout.Types
 import Engine.Graphics
 import Engine (Engine, graphics, getFramebufferSize)
 
+import Engine.Layout.Alt ()
+
 --------------------------------------------------------------------------------
 
 getCanvasSize :: Engine us (Size AbsoluteSize)

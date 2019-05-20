@@ -1,5 +1,5 @@
 Name          : Carnot
-Version       : 0.1.14.0
+Version       : 0.1.16.1
 License       : BSD3
 -- License-File  : LICENSE
 Author        : Maksymilian Owsianny
@@ -49,6 +49,7 @@ library
     , FunctionalDependencies
     , DuplicateRecordFields
     , DataKinds
+    , OverloadedLabels
 
     , DeriveGeneric
     , DeriveFunctor
@@ -88,6 +89,11 @@ library
         Engine.KDTree.Types
         Engine.Layout.Render
         Engine.Layout.Types
+
+        Engine.Layout.Alt
+        Engine.Layout.Alt.Lens
+        Engine.Lens.Utils
+
         Engine.Context
 
         Engine.HasField
@@ -203,6 +209,7 @@ executable Carnot
     , FunctionalDependencies
     , DuplicateRecordFields
     , DataKinds
+    , OverloadedLabels
 
     , DeriveGeneric
     , DeriveFunctor

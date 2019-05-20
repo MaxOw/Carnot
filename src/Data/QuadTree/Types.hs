@@ -8,6 +8,7 @@ data QuadTreeConfig = QuadTreeConfig
    , field_minCellSize   :: Float
    , field_maxBucketSize :: Int
    } deriving (Generic, Show)
+instance HasSize QuadTreeConfig Float
 instance Default QuadTreeConfig where
     def = QuadTreeConfig
         { field_size          = 1

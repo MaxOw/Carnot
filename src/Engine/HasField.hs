@@ -6,6 +6,11 @@ module Engine.HasField (module Engine.HasField) where
 import Control.Lens (Lens')
 import Data.Generics.Product as Engine.HasField (HasField'(field'))
 
+class HasSize s a | s -> a where
+    size :: Lens' s a
+    default size :: HasField' "field_size" s a => Lens' s a
+    size = field' @"field_size"
+
 class HasWidth s a | s -> a where
     width :: Lens' s a
     default width :: HasField' "field_width" s a => Lens' s a
@@ -26,7 +31,7 @@ MakeField(boxAlign)
 MakeField(minLineHeight)
 MakeField(modelTransform)
 MakeField(texture)
-MakeField(size)
+-- MakeField(size)
 MakeField(offset)
 MakeField(ftFace)
 -- MakeField(width)

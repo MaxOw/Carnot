@@ -54,6 +54,7 @@ data AtlasLocation = AtlasLocation
    , field_size      :: V2 Int
    -- , field_texCoords :: Rect Float -- [V2 Float]
    } deriving (Generic, Show)
+instance HasSize AtlasLocation (V2 Int)
 
 emptyAtlasLocation :: AtlasLocation
 emptyAtlasLocation = AtlasLocation

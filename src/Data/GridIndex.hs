@@ -13,7 +13,7 @@ module Data.GridIndex
 import Delude
 import Linear (V2)
 
-import Data.Ix (range)
+import Data.Ix (range, inRange)
 import qualified Data.List as List
 import qualified Data.Array.MArray as M
 
@@ -43,6 +43,9 @@ create conf = do
 insert :: MonadIO m => V2 Float -> a -> GridIndex a -> m ()
 insert p v g = liftIO $ do
     let i = pointOnGrid (g^.config) p
+    r <- M.getBounds (g^.grid)
+    unless (inRange r i) $
+        putStrLn $ "Index out of range: " <> show i <> " " <> show r
     updateGrid i (v:) g
 
 move :: (MonadIO m, Eq a)
@@ -77,24 +80,27 @@ bboxToRange (BBox r0 r1) = (r0, r1)
 bboxToGridBBox :: GridIndex a -> BBox Float -> BBox Int
 bboxToGridBBox g b = BBox r0 r1
     where
-    r0 = max 0 . floor <$> (p0 + halfSize) / cs
-    r1 = min <$> gs <*> (ceiling <$> (p1 + halfSize) / cs)
+    r0 = fmap floor   $ gridClamp conf $ (p0 + halfSize) / cs
+    r1 = fmap ceiling $ gridClamp conf $ (p1 + halfSize) / cs
     BBox p0 p1 = b
 
     conf = g^.config
-    gs = conf^.gridSize._Wrapped
     cs = conf^.cellSize._Wrapped
 
     halfSize = fullSize^._Wrapped / 2
     fullSize = (*) <$> (fmap fromIntegral $ conf^.gridSize) <*> conf^.cellSize
 
 pointOnGrid :: GridIndexConfig -> V2 Float -> V2 Int
-pointOnGrid conf p = max 0 $ min <$> gs <*> (floor <$> (p + halfSize) / cs)
+pointOnGrid conf p = fmap floor $ gridClamp conf $ (p + halfSize) / cs
     where
-    gs = conf^.gridSize._Wrapped
     cs = conf^.cellSize._Wrapped
     halfSize = fullSize^._Wrapped / 2
     fullSize = (*) <$> (fmap fromIntegral $ conf^.gridSize) <*> conf^.cellSize
+
+gridClamp :: GridIndexConfig -> V2 Float -> V2 Float
+gridClamp c p = fmap (max 0) $ min <$> gs <*> p
+    where
+    gs = fromIntegral <$> c^.gridSize._Wrapped
 
 gridBBox :: GridIndexConfig -> BBox Float
 gridBBox conf = BBox (-halfSize) halfSize

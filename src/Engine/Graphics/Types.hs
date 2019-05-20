@@ -43,6 +43,7 @@ data Img = Img
    , field_color    :: AlphaColor
    , field_colorMix :: Float
    } deriving (Generic)
+instance HasSize Img (Size Int)
 instance Default Img where
     def = Img
         { field_texture  = noTexture
@@ -228,6 +229,7 @@ data RenderTextLayout = RenderTextLayout
    { field_size         :: Size AbsoluteSize
    , field_renderAction :: RenderAction
    } deriving (Generic)
+instance HasSize RenderTextLayout (Size AbsoluteSize)
 
 --------------------------------------------------------------------------------
 
