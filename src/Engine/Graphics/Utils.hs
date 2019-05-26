@@ -190,6 +190,11 @@ instance Uniform Int where
         loc <- getUniformLocation program name
         glUniform1i loc (fromIntegral x)
 
+instance Uniform Bool where
+    setUniform program name x = do
+        loc <- getUniformLocation program name
+        glUniform1i loc (if x then GL_TRUE else GL_FALSE)
+
 getUniformLocation :: MonadIO m => Program -> String -> m UniformLocation
 getUniformLocation program name =
     liftIO $ withCString name $ glGetUniformLocation program

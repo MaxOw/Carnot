@@ -27,6 +27,8 @@ initWindow :: String -> (Int, Int) -> IO Context
 initWindow title (winWidth, winHeight) = do
     GLFW.setErrorCallback (Just stderrErrorCallback)
     successfulInit <- GLFW.init
+    vs <- fromMaybe "" <$> GLFW.getVersionString
+    putStrLn vs
     -- if init failed, we exit the program
     if not successfulInit then error "GLFW Init failed" else do
         mw <- tryOpenWindow 4 5 True
@@ -51,8 +53,14 @@ initWindow title (winWidth, winHeight) = do
         GLFW.windowHint $ GLFW.WindowHint'OpenGLForwardCompat forwardCompat
         GLFW.windowHint $ GLFW.WindowHint'OpenGLProfile GLFW.OpenGLProfile'Core
         GLFW.windowHint $ GLFW.WindowHint'OpenGLDebugContext True
+        GLFW.windowHint $ GLFW.WindowHint'Visible False
 
-        mwin <- GLFW.createWindow winWidth winHeight title Nothing Nothing
+        mpri <- GLFW.getPrimaryMonitor
+        mmod <- maybe (return Nothing) GLFW.getVideoMode mpri
+        -- print mmod
+        let w = fromMaybe winWidth  $ GLFW.videoModeWidth  <$> mmod
+        let h = fromMaybe winHeight $ GLFW.videoModeHeight <$> mmod
+        mwin <- GLFW.createWindow w h title Nothing Nothing
         return mwin
 
     stderrErrorCallback :: GLFW.ErrorCallback

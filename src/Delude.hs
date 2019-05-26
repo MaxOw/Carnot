@@ -12,6 +12,7 @@ module Delude
     , readRecordTVar
 
     , caseJust, caseJustM
+    , boundedRange
     ) where
 
 import Relude          as Exports
@@ -74,4 +75,7 @@ caseJust (Just v) f = f v
 
 caseJustM :: Monad m => m (Maybe a) -> (a -> m (Maybe b)) -> m (Maybe b)
 caseJustM m f = flip caseJust f =<< m
+
+boundedRange :: (Enum a, Bounded a) => [a]
+boundedRange = [minBound .. maxBound]
 
