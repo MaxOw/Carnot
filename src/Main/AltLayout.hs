@@ -36,6 +36,7 @@ render _delta s = do
 runMain :: IO ()
 runMain = do
     ctx <- reacquire 0 $ initWindow "Test" (800, 600)
+    showWindow ctx
 
     igniteEngine ctx $ Ignition
         { initializer  = initialize

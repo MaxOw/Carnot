@@ -9,7 +9,7 @@ import Foreign.Storable.Generic (GStorable)
 
 -- import Data.Vector.Mutable (IOVector)
 import Data.Vector.Storable (Vector)
-import qualified Data.Vector.Storable as Vector
+import qualified Data.Vector.Generic as Vector
 -- import Data.Vector (Vector)
 -- import qualified Data.Vector as Vector
 
@@ -73,7 +73,7 @@ initSt depthTest count = do
         , field_draw    = dc
         }
     where
-    mkVertex x = CustomVertex $ fromIntegral x / fromIntegral count
+    mkVertex x = CustomVertex $ fromIntegral x / fromIntegral count
 
 runSt :: St -> IO ()
 runSt st = do

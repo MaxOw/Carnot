@@ -5,7 +5,9 @@ module Engine.Graphics.Scroller.Types where
 import Delude
 import Engine.Backend.Types (TextureBuffer)
 import Engine.Common.Types (Size)
+import Engine.Graphics.Types (DrawBatch)
 import Engine.Graphics.TextureAtlas.Types (PageId)
+import Control.Concurrent.Async (Async)
 
 data ScrollerMargin
    = ScrollerMargin_Percent Float
@@ -27,9 +29,11 @@ data ScrollerState = ScrollerState
    , field_targetBuffer      :: TextureBuffer
    , field_atlasCustomPageId :: PageId
    , field_drawScale         :: Float
+   , field_drawPosition      :: V2 Float
    , field_position          :: V2 Float
    , field_size              :: Size Float
    , field_valid             :: Bool
+   , field_asyncBatch        :: Maybe (Async DrawBatch)
    } deriving (Generic)
 instance HasSize ScrollerState (Size Float)
 

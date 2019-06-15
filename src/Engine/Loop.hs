@@ -1,13 +1,17 @@
 module Engine.Loop where
 
-import Protolude hiding (finally)
+import Relude
 import Control.Monad.Catch (finally)
+import Control.Concurrent (threadDelay)
 import Control.Lens hiding (Context)
+
+import System.Mem
 
 import Engine.Types
 import Engine.Events
 import Engine.Context
 import Engine.Graphics
+import Criterion.Measurement (secs)
 
 import qualified Engine.Graphics.TextureAtlas as Atlas
 
@@ -40,7 +44,8 @@ mainLoop ignition = do
     -- default Config values
     integrationDelta = 0.01
     maxFrameTime     = 0.25
-    maxFullTime      = 0.016 -- 0.016 * 60 = 0.96
+    -- maxFullTime      = 0.0165 -- 0.0165 * 60 = 0.99
+    maxFullTime      = 0.016  -- 0.016 * 60 = 0.94
 
     loop accumulator lastTime = do
         -- Calc Time Variables -------------------------------------------------
@@ -63,17 +68,37 @@ mainLoop ignition = do
 
         -- Sleep ---------------------------------------------------------------
         -- calculate time left in a frame in seconds :: Float
+        -- let calcTimeLeft = (\t -> maxFullTime - t + startTime) <$> getTime
         let calcTimeLeft = (\t -> maxFullTime - t + startTime) <$> getTime
         let timesUp = (< 0) <$> calcTimeLeft
+
+        tl <- calcTimeLeft
+        when (tl<0) $ putStrLn $ "Spike: " <> (secs $ abs $ realToFrac tl)
+
+        -- when (tl>0.005) $ liftIO $ performMinorGC
+        {-
+        when (tl > 0.005) $ if tl > 0.010
+            then liftIO $ performMajorGC
+            else liftIO $ performMinorGC
+        -}
 
         -- perform incremental updates on scheduled tasks until time's up.
         incrementalUpdates timesUp
         -- sleep for the rest of the frame
         sleepTime <- calcTimeLeft
-        unlessM timesUp $ threadDelaySeconds sleepTime
+        unlessM timesUp $ do
+            -- putStrLn $ "Sleep: " <> (secs $ abs $ realToFrac sleepTime)
+            threadDelaySeconds sleepTime
 
         close <- windowShouldClose ctx
         unless close $ loop acc' startTime
+
+withTime :: Engine us () -> Engine us ()
+withTime act = do
+    start <- getTime
+    act
+    end <- getTime
+    putStrLn . secs . realToFrac $ end - start
 
 mainLoopWithCleanup :: Ignition us -> Engine us ()
 mainLoopWithCleanup ignition = mainLoop ignition `finally` cleanup

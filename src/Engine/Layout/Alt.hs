@@ -283,7 +283,7 @@ computeLayout windowSize = go (Rect 0 windowSize)
         f _       []  = []
         f !acc ((r,x):xs)
             | checkOverflow (acc+r) = [] -- [(compoff acc r, x)]
-            | otherwise = (compoff acc r, x) : f (acc+r) xs
+            | otherwise = (compoff acc r, x) : f (acc+r) xs
 
         checkOverflow x =
             floor @_ @Int (unPixels x) > ceiling (unPixels fullExtent)

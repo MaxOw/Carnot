@@ -4,6 +4,7 @@ module Engine.Graphics.TextureAtlas
 
     , newAtlas, done
     , setupAtlas
+    , getLookupAtlasLocation
     , lookupAtlasLocation
     , lookupAtlasLocations
 
@@ -344,6 +345,12 @@ lookupTexture atlas origin = do
         Nothing  -> addTexture atlas origin
         Just loc -> return loc
 -}
+
+getLookupAtlasLocation :: MonadIO m
+    => TextureAtlas -> m (Texture -> Maybe AtlasLocation)
+getLookupAtlasLocation atlas = do
+    am <- readRef (atlas^.atlasMap)
+    return $ flip HashMap.lookup am
 
 lookupAtlasLocation :: MonadIO m
     => TextureAtlas -> Texture -> m (Maybe AtlasLocation)

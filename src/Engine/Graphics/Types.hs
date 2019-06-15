@@ -13,6 +13,8 @@ import Data.Colour (Colour, AlphaColour)
 import qualified Data.Colour as Color
 import qualified Data.Colour.Names as Color
 -- import Data.Vector.Mutable (IOVector)
+import Data.Vector (Vector)
+import qualified Data.Vector.Storable as Storable
 
 import Diagrams.Transform
 import Diagrams.Core.V
@@ -21,6 +23,7 @@ import Engine.Backend.Types as Engine.Graphics.Types
 import Engine.Graphics.TextureAtlas.Types
 import Engine.FontsManager.Types
 import Engine.Common.Types
+import Engine.Graphics.Buffer.Types
 
 --------------------------------------------------------------------------------
 
@@ -163,20 +166,30 @@ instance Default SimpleTextDesc where
 --------------------------------------------------------------------------------
 
 -- type TexturesBatch = Seq TextureDesc
-type AtlasBatch    = Seq AtlasDesc
+-- type AtlasBatch    = Seq AtlasDesc
 
+{-
 data DrawRequest = DrawRequest
-   { _requestedAtlas      :: AtlasBatch
+   { _requestedAtlas      :: Vector AtlasDesc
    -- , _requestedTextures :: TexturesBatch
    } deriving (Generic)
-instance Default DrawRequest
+instance Default DrawRequest where
+    def = DrawRequest
+        { _requestedAtlas = mempty
+        }
 makeLenses ''DrawRequest
+-}
 
-type DrawBatch batch = Mat4 -> batch -> IO ()
-type DrawProcedure = Mat4 -> DrawRequest -> IO ()
+-- type DrawBatch batch = Mat4 -> batch -> IO ()
+-- type DrawProcedure = Mat4 -> DrawRequest -> IO ()
+type DrawRequest   = Vector AtlasDesc
+type DrawBatch     = Storable.Vector AtlasBatchItem
+type AtlasPrepProc = Vector AtlasDesc -> IO (Storable.Vector AtlasBatchItem)
+type AtlasDrawProc = Mat4 -> Storable.Vector AtlasBatchItem -> IO ()
 data GraphicsState = GraphicsState
    { _context            :: Context
-   , _drawProcedure      :: DrawProcedure
+   , _setupProcedure     :: AtlasPrepProc
+   , _drawProcedure      :: AtlasDrawProc
    , _textureAtlas       :: TextureAtlas
    , _fontsManager       :: FontsManager
    , _defaultFontStyle   :: Maybe FontStyle
@@ -253,5 +266,4 @@ instance Default OrthoProjectionOpts where
         , field_normalization = Nothing
         , field_scale         = 1.0
         }
-
 

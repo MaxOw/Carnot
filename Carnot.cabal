@@ -1,5 +1,5 @@
 Name          : Carnot
-Version       : 0.1.16.1
+Version       : 0.1.18.9
 License       : BSD3
 -- License-File  : LICENSE
 Author        : Maksymilian Owsianny
@@ -87,7 +87,9 @@ library
         Engine.Graphics.TextureAtlas.Types
         Engine.Graphics.Scroller
         Engine.Graphics.Scroller.Types
-        Engine.Graphics.Draw.Atlas
+        -- Engine.Graphics.Draw.Atlas
+        Engine.Graphics.Draw.Atlas1
+        Engine.Graphics.Draw.Common
         -- Engine.Graphics.Draw.Texture
         Engine.KDTree
         Engine.KDTree.Types
@@ -126,6 +128,8 @@ library
         Tests.QuadTree
         Tests
 
+        Engine.Debug
+
   other-modules:
         Delude
         -- Main
@@ -134,7 +138,12 @@ library
         Experiments.Draw01
         Experiments.Draw02
         Experiments.Draw03
+        Experiments.Draw04
+        Experiments.Current
         Experiments.Common
+
+        Data.GrowVector
+        Data.ZMap
 
   build-depends : base >= 4.5 && < 5.0
                 , stm
@@ -156,6 +165,7 @@ library
                 , exceptions
                 , ansi-wl-pprint
                 , proxied
+                , async
 
                 , lens
                 , generic-lens >= 1.1.0.0
@@ -239,6 +249,7 @@ executable Carnot
                 , mtl
                 , array
                 , vector
+                , vector-algorithms
                 , containers
                 , unordered-containers
                 , deepseq
@@ -253,8 +264,9 @@ executable Carnot
                 , exceptions
                 , ansi-wl-pprint
                 , proxied
+                , async
 
-                , Carnot
+                -- , Carnot
 
                 , lens
                 , generic-lens >= 1.1.0.0
@@ -299,6 +311,7 @@ executable benchmark
   ghc-options:
     -O2
     -Wall
+    -threaded
     -fno-warn-missing-pattern-synonym-signatures
     -fno-warn-missing-home-modules
     -fno-warn-unused-imports

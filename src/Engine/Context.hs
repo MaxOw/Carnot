@@ -38,7 +38,8 @@ initWindow title (winWidth, winHeight) = do
                 error "Window creation failed"
             Just win -> do
                 GLFW.makeContextCurrent mw
-                GLFW.swapInterval 1 --vsync
+                -- GLFW.swapInterval 1 --vsync
+                GLFW.swapInterval 0 --vsync off
                 return win
 
     where

@@ -158,6 +158,9 @@ bboxFromList (a :| as) = foldl' f (BBox a a) as
 bboxToRect :: Num a => BBox a -> Rect a
 bboxToRect b = Rect (b^.minPoint) (MkSize $ b^.maxPoint - b^.minPoint)
 
+bboxSize :: Num a => BBox a -> Size a
+bboxSize b = MkSize $ b^.maxPoint - b^.minPoint
+
 rectToBBox :: Num a => Rect a -> BBox a
 rectToBBox r = BBox (r^.offset) (r^.offset + r^.size._Wrapped)
 

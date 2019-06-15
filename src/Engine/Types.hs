@@ -2,7 +2,7 @@
 {-# Language StrictData      #-}
 module Engine.Types where
 
-import Protolude
+import Relude
 import Control.Lens          (makeLenses)
 
 -- import Engine.Context        (Context)

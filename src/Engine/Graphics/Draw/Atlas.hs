@@ -42,10 +42,11 @@ batchItemFromAtlas atlas d = do
     cPid = fromIntegral $ fromMaybe (-1) $ d^?customPage.traverse._1._Wrapped
     convTexCoords loc
         -- = map addPage $ rectToList $ subRectOf (d^.part) (loc^.texCoords)
-        = map addPage $ makeAtlasTexCoords atlas loc (d^.part)
+        = map addPage $ makeAtlasTexCoords mxs loc (d^.part)
         where
         addPage (V2 x y) = V3 x y p
         p = fromIntegral $ loc^.page
+        mxs = fromIntegral $ atlas^.maxTextureSize
 
     lookupLoc (Just tid) = fmap convTexCoords <$> lookupAtlasLocation atlas tid
     lookupLoc Nothing    = case d^.customPage of
@@ -59,12 +60,12 @@ makeCustomTexCoords pid = map addPage . rectToList
     p = pid^._Wrapped.to fromIntegral
 
 makeAtlasTexCoords
-    :: TextureAtlas -> AtlasLocation -> Maybe (Rect Int) -> [V2 Float]
-makeAtlasTexCoords atlas loc mpart = rectToList $ convRect $ case mpart of
+    :: Float -> AtlasLocation -> Maybe (Rect Int) -> [V2 Float]
+makeAtlasTexCoords maxTexSize loc mpart = rectToList $ convRect $ case mpart of
     Nothing -> Rect (loc^.offset) (MkSize $ loc^.size)
     Just rp -> Rect (loc^.offset + rp^.offset) (rp^.size)
     where
-    maxTexSize = fromIntegral $ atlas^.maxTextureSize
+    -- maxTexSize = fromIntegral $ atlas^.maxTextureSize
     convRect r = Rect vo (MkSize vs)
         where
         vo = ((fromIntegral <$> r^.offset)        + 0.5) ^/ maxTexSize

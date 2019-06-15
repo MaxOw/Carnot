@@ -1,8 +1,12 @@
 {-# Language TypeFamilies #-}
 module Engine.Graphics
     ( module Types
+    -- , initDrawProcedure
     , initGraphics
+    , showWindow
     , draw
+    , drawRequest
+    , getPrepBatchIO
     , drawBatch
     , fitViewport
     , clearColorWhite, clearColorBlack
@@ -12,6 +16,7 @@ module Engine.Graphics
     , fullyUpdateAtlas
 
     , batchRenderAction
+    , batchRenderActionDebug
 
     , pixelsToPoints
     , pointsToPixels
@@ -39,24 +44,27 @@ module Engine.Graphics
 
     , loadTextureToAtlas
     , addImageToAtlas
-    , renderImg
+    , renderImg, renderImgRaw
     ) where
 
 import Delude
 import Linear
-import qualified Data.Sequence as Seq
+-- import qualified Data.Sequence as Seq
 import qualified Data.Char as Char
 import qualified Data.List as List
 -- import qualified Data.Vector.Algorithms.Intro as M
 -- import qualified Data.Vector.Mutable as M
 import Graphics.GL
+import qualified Graphics.UI.GLFW as GLFW
+import Data.Vector (Vector)
 
 import Diagrams.Core (InSpace, Transformable)
 import qualified Diagrams.Transform as T
 import qualified Diagrams.TwoD.Transform as T
 
 import Engine.Graphics.Types as Types
-import Engine.Graphics.Draw.Atlas
+-- import Engine.Graphics.Draw.Atlas
+import Engine.Graphics.Draw.Atlas1
 
 import Engine.FontsManager
 import Engine.Layout.Types
@@ -69,38 +77,53 @@ import Engine.Context (Context)
 import Engine.Graphics.Utils (loadImageSync, createTextureBufferFrom, mkMatHomo2)
 import Codec.Picture (DynamicImage, Image(..), convertRGBA8)
 
+import qualified Data.GrowVector as G
+
 --------------------------------------------------------------------------------
 
+{-
 initDrawProcedure :: MonadIO m => TextureAtlas -> m DrawProcedure
 initDrawProcedure atlas = do
-    drawAtlas    <- initDrawAtlas
- -- drawTextures <- initDrawTextures
- -- drawShapes   <- initDrawShapes
- -- drawPolygons <- initDrawPolygons
+    (setupAtlas, drawAtlas) <- initDrawAtlas atlas
     return $ \p r -> do
-        unlessEmpty (sortZIndex $ r^.requestedAtlas) $ drawAtlas atlas p
+        drawAtlas p =<< setupAtlas (r^.requestedAtlas)
      -- unlessEmpty (r^.requestedTextures) $ drawTextures    p
      -- drawShapes      p $ r^.requestedShapes
      -- drawPolygons    p $ r^.requestedPolygons
 
     where
-    unlessEmpty x f
-        | isn't _Empty x = f x
-        | otherwise      = return ()
+    -- unlessEmpty x f
+        -- | isn't _Empty x = f x
+        -- | otherwise      = return ()
+-}
 
-    sortZIndex :: AtlasBatch -> AtlasBatch
-    sortZIndex = Seq.sortBy $ comparing $ view zindex
+
+batchRenderActionDebug :: MonadIO m => RenderAction -> m DrawRequest
+batchRenderActionDebug ra = do
+    gv <- liftIO G.new
+    go gv ra
+    liftIO $ G.unsafeToVector gv
+    where
+    go gv = \case
+        RenderFromAtlas   d    -> liftIO $ G.snoc gv d
+        RenderComposition t rs -> mapM_ (go gv) (T.transform t rs)
+        -- RenderComposition t rs -> mapM_ (go gv) rs -- (T.transform t rs)
+        RenderSimpleText  d tx -> return ()
 
 batchRenderAction :: RenderAction -> Engine us DrawRequest
-batchRenderAction = go def
+batchRenderAction ra = do
+    gv <- liftIO G.new
+    go gv ra
+    liftIO $ G.unsafeToVector gv
     where
-    go r = \case
-        RenderFromAtlas   d    -> return $ over requestedAtlas (|> d) r
-        RenderComposition t rs -> foldlM go r (T.transform t rs)
+    go gv = \case
+        RenderFromAtlas   d    -> liftIO $ G.snoc gv d
+        RenderComposition t rs -> mapM_ (go gv) (T.transform t rs)
+        -- RenderComposition t rs -> mapM_ (go gv) rs -- (T.transform t rs)
         RenderSimpleText  d tx -> do
             rt <- makeRenderSimpleText d tx
-            go r rt
-            -- return r
+            go gv rt
+
 
 --------------------------------------------------------------------------------
 
@@ -110,19 +133,34 @@ initGraphics ctx = do
     mDPI <- Context.getPrimaryDPI
     -- logOnce $ "Monitor DPI: " <> show mDPI
     fm <- initFontsManager mDPI
-    proc <- initDrawProcedure atlas
+    (setupAtlas, drawAtlas) <- initDrawAtlas atlas
     return $ GraphicsState
         { _context          = ctx
-        , _drawProcedure    = proc
+        , _setupProcedure   = setupAtlas
+        , _drawProcedure    = drawAtlas
         , _textureAtlas     = atlas
         , _fontsManager     = fm
         , _defaultFontStyle = Nothing
         }
 
-draw :: Mat4 -> RenderAction -> Engine us ()
-draw projMatrix = drawBatch projMatrix <=< batchRenderAction
+showWindow :: MonadIO m => Context -> m ()
+showWindow = liftIO . GLFW.showWindow
 
-drawBatch :: Mat4 -> DrawRequest -> Engine us ()
+draw :: Mat4 -> RenderAction -> Engine us ()
+draw projMatrix = drawRequest projMatrix <=< batchRenderAction
+
+drawRequest :: Mat4 -> DrawRequest -> Engine us ()
+drawRequest projMatrix = drawBatch projMatrix <=< prepBatch
+
+prepBatch :: DrawRequest -> Engine us DrawBatch
+prepBatch req = do
+    setupProc <- use $ graphics.setupProcedure
+    liftIO $ setupProc req
+
+getPrepBatchIO :: Engine us (DrawRequest -> IO DrawBatch)
+getPrepBatchIO = use $ graphics.setupProcedure
+
+drawBatch :: Mat4 -> DrawBatch -> Engine us ()
 drawBatch projMatrix batch = do
     drawProc <- use $ graphics.drawProcedure
     liftIO $ drawProc projMatrix batch
@@ -628,7 +666,10 @@ renderActionBBox x = viaNonEmpty bboxUnion
         RenderSimpleText  _ _  -> id -- TODO: calc bbox
 
 renderImg :: Img -> RenderAction
-renderImg i = renderFromAtlas $ def
+renderImg = renderFromAtlas . renderImgRaw
+
+renderImgRaw :: Img -> AtlasDesc
+renderImgRaw i = def
     & colorMix  .~ (i^.colorMix)
     & color     .~ (i^.color)
     & textureId .~ Just (i^.texture)
@@ -639,6 +680,7 @@ renderImg i = renderFromAtlas $ def
     where
     sw = fromMaybe (i^.size.width)  $ i^?part.traverse.size.width
     sh = fromMaybe (i^.size.height) $ i^?part.traverse.size.height
+
 
 renderSimpleText :: SimpleTextDesc -> Text -> RenderAction
 renderSimpleText = RenderSimpleText

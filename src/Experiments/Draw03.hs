@@ -4,7 +4,9 @@ import Delude
 import Linear
 -- import Foreign.Storable (sizeOf)
 -- import Data.Proxyless (theSizeOf)
-import Data.List as List (unlines, (!!))
+import Data.List ((!!))
+import qualified Data.List as List
+import qualified Data.IntMap as IntMap
 import Engine.Lens.Utils
 -- import Foreign (nullPtr)
 import qualified Graphics.UI.GLFW as GLFW
@@ -13,7 +15,8 @@ import Foreign.Storable.Generic (GStorable)
 
 -- import Data.Vector.Mutable (IOVector)
 import Data.Vector.Storable (Vector)
-import qualified Data.Vector.Storable as Vector
+import qualified Data.Vector.Generic as Vector
+import qualified Data.Vector as V
 -- import Data.Vector (Vector)
 -- import qualified Data.Vector as Vector
 
@@ -23,11 +26,49 @@ import Experiments.Common
 import Graphics.GL
 import Engine.Graphics.Utils
 import Engine.Graphics.Buffer
+import qualified Test.QuickCheck as QC
+-- import qualified Data.Vector.Algorithms.Intro as M
+-- import qualified Data.Vector.Algorithms.AmericanFlag as M
+import qualified Data.Vector.Algorithms.Radix as M
+-- import qualified Data.Vector.Mutable as M
+
+-- import Data.GrowVector
+-- import qualified Data.ZMap as Z
 
 --------------------------------------------------------------------------------
 
 bench_draw03 :: Int -> Int -> Benchmark
 bench_draw03 squareSize count = mkBench "draw03" (initSt squareSize count) runSt
+
+-- * Benchmark sorting & partitioning
+-- * Benchmark texture lookup
+
+bench_sortPart :: Int -> Benchmark
+bench_sortPart n = env (gvec n) $ \v ->
+    -- bench "Sort & Partition" $ nfIO (sortPart v) -- =<< V.thaw v)
+    -- bench "Sort & Partition" $ nfIO (sortPart v) -- =<< V.thaw v)
+    bench "Texture lookup"   $ nf (V.mapMaybe (flip IntMap.lookup im)) v
+    where
+    im = IntMap.fromList $ map (\x -> (x,x)) [0..1000]
+
+gvec :: Int -> IO (V.Vector Int)
+gvec n = fmap V.fromList $
+    -- QC.generate $ QC.vectorOf n $ QC.choose (0, 1000000)
+    QC.generate $ QC.vectorOf n $ QC.choose (0, 100)
+
+sortPart :: V.Vector Int -> IO (V.Vector Int, V.Vector Int)
+sortPart v = do
+    vv <- V.thaw v
+    {-
+    zm <- Z.new 100
+    V.forM_ v $ \x -> do
+        Z.add zm x x
+    vv <- Z.toVector zm
+    -}
+    -- return $ over _1 V.reverse $ V.partition even vv -- <$> V.unsafeFreeze v
+    M.sort vv
+    over _1 V.reverse . V.partition even <$> V.unsafeFreeze vv
+    -- . fromList . sort . Vector.toList
 
 --------------------------------------------------------------------------------
 
@@ -73,19 +114,27 @@ initSt squareSize count = do
     cx <- Context.initWindow "draw03" (400, 400)
     dc <- initDrawCall (fromIntegral squareSize)
     GLFW.swapInterval 0
-    GLFW.showWindow cx
+    -- GLFW.showWindow cx
 
     canvasSize <- Context.getFramebufferSize cx
     let (w, h) = over each fromIntegral canvasSize
-    -- let vd = Vector.fromList $ take count $ map (mkVertex w h) [0 :: Int ..]
-    let vd = Vector.fromList [mkVertex w h 1]
-    let vb = Vector.fromList [mkVertex w h 2]
 
-    let ss = fromIntegral squareSize
+    let ss = fromIntegral squareSize
     let ww = ceiling $ w/ss
     let hh = ceiling $ h/ss
+    let layerSize = (ww*hh)
     print (ww*hh :: Int)
     print (div count (ww*hh) :: Int)
+
+{-
+    let vd = Vector.fromList $ take layerSize
+           $ map (mkVertex 1 False w h) [0 :: Int ..]
+    let vb = Vector.fromList $ take count
+           $ map (mkVertex 0 True w h) [0 :: Int ..]
+-}
+    let vb = Vector.empty
+    let vd = Vector.fromList $ take count
+           $ map (mkVertex 0 False w h) [0 :: Int ..]
 
     glEnable GL_DEPTH_TEST
     glDepthFunc GL_LESS
@@ -99,19 +148,17 @@ initSt squareSize count = do
         , field_projMat    = projM
         }
     where
-    mkVertex w h x = CustomVertex
-        { field_zindex   = fromIntegral x / fromIntegral count
+    dmax = 8388608 -- 2^23
+    mkVertex zoff blend w h x = CustomVertex
+        { field_zindex   = fromIntegral zx / dmax
         , field_position = pos
         , field_color    =
             [ V3 1 0 0, V3 0 1 0, V3 0 0 1
             , V3 1 1 0, V3 0 1 1, V3 1 0 1
-            , V3 0 0 0 ] !! (mod x 7)
+            , V3 0 0 0 ] !! (mod zx 7)
         }
         where
-        distribute = True
-        blend = False
-        pos | distribute = V2 (wx - w/2 + ss/2 + oo) (hx - h/2 + ss/2 + oo)
-            | otherwise  = V2 0 0
+        pos = V2 (wx - w/2 + ss/2 + oo) (hx - h/2 + ss/2 + oo)
         ss = fromIntegral squareSize
         ww = ceiling $ w/ss
         hh = ceiling $ h/ss
@@ -119,8 +166,9 @@ initSt squareSize count = do
         hx = ss * (fromIntegral $ hn)
         hn = div xx ww
         xx = mod x (ww*hh)
+        zx = x + zoff*ww*hh
         oo = if blend
-            then (-ss/2) * (fromIntegral $ mod (div x (ww*hh)) 2)
+            then ss/2
             else 0
 
 runSt :: St -> IO ()
@@ -143,7 +191,6 @@ initDrawCall squareSize = do
             glBlendEquation GL_FUNC_ADD
 
         drawCall fullBatch $ \program -> do
-         -- setUniform program "Blend"            blend
             setUniform program "ProjectionMatrix" proj
 
         glDepthMask GL_TRUE
@@ -179,10 +226,8 @@ initDrawCall squareSize = do
     fragmentShader = List.unlines $ shaderVersion :
         [ "in highp vec3 vColor;"
         , "out vec4 FragColor;"
-     -- , "uniform bool Blend;"
         , "void main(void){"
         , "  FragColor.rgb = vColor.rgb;"
-        , "  FragColor.a   = 0.1;"
+        , "  FragColor.a   = 0.3;"
         , "}" ]
-
 

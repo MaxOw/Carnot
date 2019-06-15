@@ -7,6 +7,7 @@ module Delude
 
     , callStackFileLine
     , logOnce
+
     , makeFieldsCustom
 
     , readRecordTVar
@@ -26,6 +27,8 @@ import Data.Ix         as Exports (Ix)
 import Engine.HasField   as Exports
 import Engine.HasPattern as Exports
 
+import Engine.Debug
+
 import Engine.TH
 
 import Control.Concurrent.STM.TMVar as Exports (TMVar)
@@ -33,38 +36,12 @@ import Control.Concurrent.STM.TMVar as Exports (TMVar)
 import Diagrams.TwoD.Transform as Exports (T2)
 import Diagrams.Angle          as Exports ((@@))
 
-import qualified Data.Set as Set
-import System.IO.Unsafe (unsafePerformIO)
-import GHC.Stack (SrcLoc(..))
-
 --------------------------------------------------------------------------------
 
 splitWhenKeep :: (a -> Bool) -> [a] -> [[a]]
 splitWhenKeep = split . whenElt
 
 type T2D = T2 Float
-
-{-# NOINLINE logRef #-}
-logRef :: IORef (Set String)
-logRef = unsafePerformIO $ newIORef mempty
-
-callStackFileLine :: CallStack -> String
-callStackFileLine cs = fromMaybe "?:? " $ fmap prettySrc mSrcLoc
-    where
-    mSrcLoc = viaNonEmpty head $ map snd $ getCallStack cs
-    prettySrc s = srcLocFile s <> ":" <> show (srcLocStartLine s) <> " "
-
-logOnce :: (HasCallStack, MonadIO m) => Text -> m ()
-logOnce msg = liftIO $ do
-    let cs = callStack
-    let srcLoc = callStackFileLine cs
-    let css = prettyCallStack callStack
-    callStackSet <- readIORef logRef
-    unless (Set.member css callStackSet) $ do
-        atomicModifyIORef' logRef $ \s -> (Set.insert css s, ())
-        -- putStrLn cs
-        putTextLn (toText srcLoc <> msg)
-        return ()
 
 readRecordTVar :: MonadIO m => s -> Lens' s (TVar a) -> m a
 readRecordTVar s len = readTVarIO (s^.len)

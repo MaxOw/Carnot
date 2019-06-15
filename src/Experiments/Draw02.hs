@@ -13,7 +13,7 @@ import Foreign.Storable.Generic (GStorable)
 
 -- import Data.Vector.Mutable (IOVector)
 import Data.Vector.Storable (Vector)
-import qualified Data.Vector.Storable as Vector
+import qualified Data.Vector.Generic as Vector
 -- import Data.Vector (Vector)
 -- import qualified Data.Vector as Vector
 
@@ -73,7 +73,7 @@ instance NFData St
 initSt :: Bool -> Int -> Int -> Bool -> Bool -> Bool -> IO St
 initSt depthTest squareSize count distribute discard blend = do
     cx <- Context.initWindow "draw02" (400, 400)
-    dc <- initDrawCall (fromIntegral squareSize) discard
+    dc <- initDrawCall (fromIntegral squareSize) discard
     GLFW.swapInterval 0
     -- GLFW.showWindow cx
 
@@ -81,7 +81,7 @@ initSt depthTest squareSize count distribute discard blend = do
     let (w, h) = over each fromIntegral canvasSize
     let vd = Vector.fromList $ take count $ map (mkVertex w h) [0 :: Int ..]
 
-    let ss = fromIntegral squareSize
+    let ss = fromIntegral squareSize
     let ww = ceiling $ w/ss
     let hh = ceiling $ h/ss
     print (ww*hh :: Int)
@@ -107,7 +107,7 @@ initSt depthTest squareSize count distribute discard blend = do
         }
     where
     mkVertex w h x = CustomVertex
-        { field_zindex   = fromIntegral x / fromIntegral count
+        { field_zindex   = fromIntegral x / fromIntegral count
         , field_position = pos
         , field_color    =
             [ V3 1 0 0, V3 0 1 0, V3 0 0 1

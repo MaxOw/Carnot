@@ -1,6 +1,39 @@
+{-# Options_GHC -fno-warn-orphans #-}
 {-# Language RankNTypes #-}
 module Engine.Benchmark where
 
+import Delude
+import Engine
+import Criterion.Main
+import qualified Engine.Context as Context
+
+instance NFData a => NFData (EngineState a) where rnf _ = ()
+
+mkBench :: NFData st
+    => String
+    -> Engine () st
+    -> (st -> Engine st ())
+    -> Benchmark
+mkBench n initSt runSt = env i $ \st -> bench n $ whnfIO (r st)
+    where
+    i = do
+        ctx <- Context.initWindow n (400, 400)
+        makeContextCurrent (Just ctx)
+        initialEventQueue    <- initEvents ctx Nothing
+        initialGraphicsState <- initGraphics ctx
+
+        let initialEngineState = EngineState
+                { _userState  = ()
+                , _eventQueue = initialEventQueue
+                , _graphics   = initialGraphicsState
+                }
+
+        runStateT initSt initialEngineState
+
+    r (st, engineState) =
+        void $ evalStateT (runSt st) $ engineState { _userState = st }
+
+{-
 import Delude
 import Data.Vector.Mutable (IOVector)
 import qualified Data.Vector as Vector
@@ -117,3 +150,4 @@ prettyBenchState x = if x^.ff#loopCount <= 0 then "" else vsep
     where
     mkr a mn mx = a <+> "(" <> mn <+> ".." <+> mx <> ")"
 
+-}
