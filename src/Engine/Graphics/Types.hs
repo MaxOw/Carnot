@@ -24,6 +24,10 @@ import Engine.Graphics.TextureAtlas.Types
 import Engine.FontsManager.Types
 import Engine.Common.Types
 import Engine.Graphics.Buffer.Types
+import Engine.Graphics.Buffer.Types as Engine.Graphics.Types (DrawBatch)
+import Engine.Graphics.TextureCache.Types
+import Engine.Graphics.DrawBatchCache.Types
+import Engine.Graphics.TaskManager
 
 --------------------------------------------------------------------------------
 
@@ -180,12 +184,21 @@ instance Default DrawRequest where
 makeLenses ''DrawRequest
 -}
 
+type TextCacheKey = (BoxAlign, FontStyle, Text)
+
+data TextLineDesc = TextLineDesc
+   { field_size            :: Size Float
+   , field_verticalOffset  :: Float
+   , field_minSpaceAdvance :: Float
+   } deriving (Generic)
+instance Default TextLineDesc
+instance HasSize TextLineDesc (Size Float)
+
 -- type DrawBatch batch = Mat4 -> batch -> IO ()
 -- type DrawProcedure = Mat4 -> DrawRequest -> IO ()
 type DrawRequest   = Vector AtlasDesc
-type DrawBatch     = Storable.Vector AtlasBatchItem
 type AtlasPrepProc = Vector AtlasDesc -> IO (Storable.Vector AtlasBatchItem)
-type AtlasDrawProc = Mat4 -> Storable.Vector AtlasBatchItem -> IO ()
+type AtlasDrawProc = Bool -> Mat4 -> Storable.Vector AtlasBatchItem -> IO ()
 data GraphicsState = GraphicsState
    { _context            :: Context
    , _setupProcedure     :: AtlasPrepProc
@@ -193,6 +206,9 @@ data GraphicsState = GraphicsState
    , _textureAtlas       :: TextureAtlas
    , _fontsManager       :: FontsManager
    , _defaultFontStyle   :: Maybe FontStyle
+   , _textCache          :: TextureCache
+   , _drawBatchCache     :: DrawBatchCache
+   , _taskManager        :: TaskManager
    }
 makeLenses ''GraphicsState
 
@@ -201,7 +217,6 @@ makeLenses ''GraphicsState
 data RenderAction
    = RenderFromAtlas AtlasDesc
    | RenderComposition T2D [RenderAction]
-   | RenderSimpleText SimpleTextDesc Text
 
 instance Semigroup RenderAction where
     a <> b  = RenderComposition mempty [a, b]
@@ -218,13 +233,11 @@ instance Transformable RenderAction where
     transform t = \case
         RenderFromAtlas d -> RenderFromAtlas $ over modelTransform (t <>) d
         RenderComposition t0 ds -> RenderComposition (t <> t0) ds
-        RenderSimpleText  ds tx -> RenderSimpleText (transform t ds) tx
 
 instance BoundingPoints RenderAction where
     boundingPoints = \case
         RenderFromAtlas     d  -> boundingPoints d
         RenderComposition t ds -> concatMap (transform t . boundingPoints) ds
-        RenderSimpleText  _ _  -> mempty --TODO: add bounding points calculation
 
 --------------------------------------------------------------------------------
 

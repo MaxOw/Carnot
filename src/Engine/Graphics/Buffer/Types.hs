@@ -8,6 +8,7 @@ import Delude
 import Linear
 import Graphics.GL
 import Foreign.Storable.Generic
+import qualified Data.Vector.Storable as Storable
 
 import Engine.Backend.Types
 
@@ -86,6 +87,8 @@ data AtlasBatchItem = AtlasBatchItem
    , field_colorMix      :: Float
    , field_customPageNum :: Float
    } deriving (Generic)
+
+type DrawBatch = Storable.Vector AtlasBatchItem
 
 instance GStorable AtlasBatchItem
 

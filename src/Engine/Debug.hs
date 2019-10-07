@@ -1,6 +1,7 @@
 module Engine.Debug
     ( callStackFileLine
     , logOnce
+    , resetDebugLog
     ) where
 
 import Relude
@@ -17,6 +18,10 @@ callStackFileLine cs = fromMaybe "?:? " $ fmap prettySrc mSrcLoc
     where
     mSrcLoc = viaNonEmpty head $ map snd $ getCallStack cs
     prettySrc s = srcLocFile s <> ":" <> show (srcLocStartLine s) <> " "
+
+resetDebugLog :: MonadIO m => m ()
+resetDebugLog = do
+    writeIORef logRef Set.empty
 
 logOnce :: (HasCallStack, MonadIO m) => Text -> m ()
 logOnce msg = liftIO $ do

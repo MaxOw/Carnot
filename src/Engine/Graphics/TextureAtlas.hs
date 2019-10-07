@@ -2,7 +2,7 @@
 module Engine.Graphics.TextureAtlas
     ( module Engine.Graphics.TextureAtlas.Types
 
-    , newAtlas, done
+    , new, done
     , setupAtlas
     , getLookupAtlasLocation
     , lookupAtlasLocation
@@ -11,42 +11,28 @@ module Engine.Graphics.TextureAtlas
     , assignCustomPage
     , swapCustomPage
 
-    -- , createTextureOrigin
     , addTexture
 
-    , incrementalUpdate
+    -- , incrementalUpdate
     , fullUpdate
     ) where
 
 import Delude
--- import Linear
+import Linear
 -- import Text.Printf (printf)
-import Foreign hiding (void)
+import Foreign hiding (void, new)
 import Graphics.GL
--- import Engine.Graphics.Types
 import Engine.Graphics.Utils
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Vector as Vector
--- import qualified Data.Sequence as Seq
--- import Data.IORef
 import Control.Concurrent.STM.TChan (TChan)
 import qualified Control.Concurrent.STM.TChan as STM
 
 import Engine.Graphics.TextureAtlas.Types
+import Engine.Graphics.TaskManager (TaskManager)
+import qualified Engine.Graphics.TaskManager as TaskManager
 
 --------------------------------------------------------------------------------
-
-{-
-createTextureOrigin :: MonadIO m => DynamicImage -> m TextureOrigin
-createTextureOrigin dyn = do
-    let Image w h bytes = convertRGBA8 dyn
-    buf <- liftIO $ unsafeWith bytes $ \ptr ->
-        createTextureBuffer (fromIntegral w) (fromIntegral h) (castPtr ptr)
-    return $ TextureOrigin
-        { field_buffer      = buf
-        , field_textureSize = V2 w h
-        }
--}
 
 allSlotsOfSize :: AtlasLayout a -> SlotSize -> Seq QuadPath
 allSlotsOfSize atlasLayout slotSize = go maxSize tree empty empty
@@ -99,9 +85,6 @@ insertQuad v path tree = go path tree
 
     emptyQuad = QuadNode QuadEmpty QuadEmpty QuadEmpty QuadEmpty
 
--- canInsertSlot :: AtlasLayout a -> SlotSize -> Bool
--- canInsertSlot atlasLayout = not . null . allSlotsOfSize atlasLayout
-
 insertEmptySlot
     :: SlotSize -> a -> AtlasLayout a -> Maybe (QuadPath, AtlasLayout a)
 insertEmptySlot slotSize v atlasLayout = case emptySlots of
@@ -124,22 +107,6 @@ quadPathToOffset maxSlotSize path = go maxSlotSize 0 path
         pss = pred ss
         ps = fromSlotSize pss
     go _ !acc _ = acc
-
-{-
-testAtlasLayout :: AtlasLayout a
-testAtlasLayout = emptyAtlasLayout SlotSize_1024
-
--- testOff :: V2 Int
--- testOff = quadPathToOffset SlotSize_1024 (Seq.fromList [BR, TR, TL])
-
-testL :: Seq QuadPath
--- testL = toList $ allSlotsOfSize testAtlasLayout SlotSize_8
-testL = allSlotsOfSize testAtlasLayout SlotSize_512
-
-Just ta = insertEmptySlot SlotSize_512 () testAtlasLayout
-Just tb = insertEmptySlot SlotSize_16 () (snd ta)
-xx = flip allSlotsOfSize SlotSize_16 (snd tb)
--}
 
 --------------------------------------------------------------------------------
 
@@ -173,19 +140,16 @@ fitSlotSize maxSize x
     | fitOp x 4096  = Just SlotSize_4096
     | otherwise = Nothing
 
--- newtype TextureName = TextureName Text
--- type TextureName = Text
-
-newAtlas :: MonadIO m => m TextureAtlas
-newAtlas = do
+new :: MonadIO m => TaskManager -> m TextureAtlas
+new tm = do
     -- maxTexUnits <- glGetInteger GL_MAX_TEXTURE_IMAGE_UNITS
     -- maxTexSize  <- glGetInteger GL_MAX_TEXTURE_SIZE
     let maxTexUnits = 16
     let maxTexSize  = 4096
-    amap      <- newRef HashMap.empty
-    primary   <- newRef =<< newAtlasPages maxTexUnits maxTexSize
-    -- secondary <- newRef =<< newAtlasPages maxTexUnits maxTexSize
-    custom <- newRef Vector.empty
+    amap      <- newIORef HashMap.empty
+    primary   <- newIORef =<< newAtlasPages maxTexUnits maxTexSize
+    -- secondary <- newIORef =<< newAtlasPages maxTexUnits maxTexSize
+    custom <- newIORef Vector.empty
     tasksChan <- newTChanIO
     return TextureAtlas
         { field_maxTextureUnits = maxTexUnits
@@ -195,11 +159,12 @@ newAtlas = do
         -- , field_secondaryPages  = secondary
         , field_customPages     = custom
         , field_tasks           = tasksChan
+        , field_taskManager     = tm
         }
 
 done :: MonadIO m => TextureAtlas -> m ()
 done atlas = do
-    let atlasRef l = readRef (atlas^.l)
+    let atlasRef l = readIORef (atlas^.l)
     mapM_ (doneTextureBuffer . view buffer) =<< atlasRef primaryPages
     mapM_ (delObject glDeleteTextures) . HashMap.keys =<< atlasRef atlasMap
     mapM_ doneTextureBuffer =<< atlasRef customPages
@@ -232,12 +197,12 @@ newAtlasPage pageSize = do
 
 setupAtlas :: MonadIO m => TextureAtlas -> Program -> m ()
 setupAtlas atlas program = do
-    lrs <- fmap toList $ readRef $ atlas^.primaryPages
+    lrs <- fmap toList $ readIORef $ atlas^.primaryPages
     forM_ (zip [0..] lrs) $ \(i, p) -> do
         bindTextureN i program
             ("Primary[" ++ show i ++ "]")
             (p^.buffer.texture)
-    cus <- fmap toList $ readRef $ atlas^.customPages
+    cus <- fmap toList $ readIORef $ atlas^.customPages
     let s = length lrs
     forM_ (zip [0..] cus) $ \(i, p) -> do
         bindTextureN (s+i) program
@@ -248,11 +213,11 @@ tryAddSlot :: MonadIO m
     => TextureAtlas -> SlotSize -> TextureBuffer -> m (Maybe AtlasLocation)
 tryAddSlot atlas slotSize buf = do
     let aref = atlas^.primaryPages
-    primary <- readRef aref
+    primary <- readIORef aref
     case go 0 empty primary of
         Nothing -> return Nothing
         Just (loc, newPrimary) -> do
-            writeRef aref newPrimary
+            writeIORef aref newPrimary
             addLocationRequest atlas loc buf
             return (Just loc)
 
@@ -276,34 +241,28 @@ makeLocation maxSlotSize pageNum path buf = AtlasLocation
     { field_page      = pageNum
     , field_offset    = locOffset
     , field_size      = locSize
-    -- , field_texCoords = makeTexCoords maxSlotSize locOffset locSize
     }
     where
     locOffset = quadPathToOffset maxSlotSize path
     locSize   = over each fromIntegral $ V2 (buf^.width) (buf^.height)
-
-{-
-makeTexCoords :: SlotSize -> V2 Int -> V2 Int -> Rect Float
-makeTexCoords maxSlotSize locOffset locSize = Rect vo (MkSize vs)
-    where
-    ss = fromIntegral (fromSlotSize maxSlotSize :: Int)
-    vo = ((fromIntegral <$> locOffset) + 0.5) ^/ ss
-    vs = ((fromIntegral <$> locSize)   - 1.0) ^/ ss
--}
 
 addLocationRequest :: MonadIO m
     => TextureAtlas -> AtlasLocation -> TextureBuffer -> m ()
 addLocationRequest atlas loc buf = do
     let mref = atlas^.atlasMap
     let tex  = buf^.texture
-    addTask atlas $ TaskAddTexture loc buf
-    modifyRef mref $ HashMap.insert tex loc
+    let tm   = field_taskManager atlas
+    TaskManager.addSyncTask tm $ taskAddTexture atlas loc buf
+    -- addTask atlas $ TaskAddTexture loc buf
+    modifyIORef' mref $ HashMap.insert tex loc
 
+{-
 addTask :: MonadIO m
     => TextureAtlas -> AtlasTask -> m ()
 addTask atlas task = do
     let chan = atlas^.tasks
     writeTChanIO chan task
+-}
 
 addTexture :: MonadIO m => TextureAtlas -> TextureBuffer -> m ()
 addTexture atlas buf = whenNothingM_ lookupLoc $ do
@@ -326,7 +285,7 @@ addTexture atlas buf = whenNothingM_ lookupLoc $ do
                         -- (ss $ l^.offset) (ss slotSize) (ss texSize)) :: String)
                     return ()
     where
-    lookupLoc  = HashMap.lookup tex <$> readRef (atlas^.atlasMap)
+    lookupLoc  = HashMap.lookup tex <$> readIORef (atlas^.atlasMap)
     tex        = buf^.texture
     maxTexSize = atlas^.maxTextureSize
     texSize    = over each fromIntegral $ V2 (buf^.width) (buf^.height)
@@ -335,33 +294,23 @@ addTexture atlas buf = whenNothingM_ lookupLoc $ do
 logOnceFor :: MonadIO m => a -> Text -> m ()
 logOnceFor _what msg = putTextLn msg
 
-{-
-lookupTexture :: MonadIO m => TextureAtlas -> TextureOrigin -> m AtlasLocation
-lookupTexture atlas origin = do
-    amap <- readRef $ atlas^.atlasMap
-    let otex = origin^.buffer.texture
-    let mLoc = HashMap.lookup otex amap
-    case mLoc of
-        Nothing  -> addTexture atlas origin
-        Just loc -> return loc
--}
-
 getLookupAtlasLocation :: MonadIO m
     => TextureAtlas -> m (Texture -> Maybe AtlasLocation)
 getLookupAtlasLocation atlas = do
-    am <- readRef (atlas^.atlasMap)
+    am <- readIORef (atlas^.atlasMap)
     return $ flip HashMap.lookup am
 
 lookupAtlasLocation :: MonadIO m
     => TextureAtlas -> Texture -> m (Maybe AtlasLocation)
-lookupAtlasLocation atlas tex = HashMap.lookup tex <$> readRef (atlas^.atlasMap)
+lookupAtlasLocation atlas tex = HashMap.lookup tex <$> readIORef (atlas^.atlasMap)
 
 lookupAtlasLocations :: MonadIO m
     => TextureAtlas -> [Texture] -> m [Maybe AtlasLocation]
 lookupAtlasLocations atlas ts = do
-    amap <- readRef (atlas^.atlasMap)
+    amap <- readIORef (atlas^.atlasMap)
     return $ map (flip HashMap.lookup amap) ts
 
+{-
 incrementalUpdate :: MonadIO m => TextureAtlas -> m Bool -> m ()
 incrementalUpdate atlas timesUp = go
     where
@@ -374,34 +323,49 @@ incrementalUpdate atlas timesUp = go
 
 performTask :: MonadIO m => TextureAtlas -> AtlasTask -> m ()
 performTask atlas = \case
-    TaskAddTexture loc buf -> do
-        primary <- readRef $ atlas^.primaryPages
-        let mPage = Vector.indexM primary $ loc^.page
-        whenJust mPage $ \atlasPage -> do
-            let atlasTexture = atlasPage^.buffer.texture
-            withTextureBuffer buf $ do
-                let V2 x y = fromIntegral <$> loc^.offset
-                let V2 w h = fromIntegral <$> loc^.size
-                glBindTexture GL_TEXTURE_2D atlasTexture
-                glCopyTexSubImage2D GL_TEXTURE_2D 0 x y 0 0 w h
-                glBindTexture GL_TEXTURE_2D noTexture
+    TaskAddTexture loc buf -> liftIO $ taskAddTexture atlas loc buf
+-}
+
+taskAddTexture :: TextureAtlas -> AtlasLocation -> TextureBuffer -> IO ()
+taskAddTexture atlas loc buf = do
+    primary <- readIORef $ atlas^.primaryPages
+    let mPage = Vector.indexM primary $ loc^.page
+    whenJust mPage $ \atlasPage -> do
+        let off = fromIntegral <$> loc^.offset
+        copyAtOffset off buf (atlasPage^.buffer)
+
+copyAtOffset
+    :: MonadIO m
+    => V2 Int32      -- ^ target offset in pixels
+    -> TextureBuffer -- ^ source texture
+    -> TextureBuffer -- ^ target texture
+    -> m ()
+copyAtOffset pos source target = do
+
+    let srcName   = source^.texture
+    let dstName   = target^.texture
+    let dstX      = pos^._x
+    let dstY      = pos^._y
+    let srcWidth  = source^.width
+    let srcHeight = source^.height
+
+    glCopyImageSubData
+        srcName GL_TEXTURE_2D 0 0 0 0
+        dstName GL_TEXTURE_2D 0 dstX dstY 0
+        srcWidth srcHeight 1
+
+    {-
+    withTextureBuffer source $ do
+        let targetTexture = target^.buffer.texture
+        let V2 x y = fromIntegral <$> loc^.offset
+        let V2 w h = fromIntegral <$> loc^.size
+        glBindTexture GL_TEXTURE_2D targetTexture
+        glCopyTexSubImage2D GL_TEXTURE_2D 0 x y 0 0 w h
+        glBindTexture GL_TEXTURE_2D noTexture
+        -}
 
 fullUpdate :: MonadIO m => TextureAtlas -> m ()
-fullUpdate atlas = incrementalUpdate atlas (return False)
-
---------------------------------------------------------------------------------
-
-newRef :: MonadIO m => a -> m (IORef a)
-newRef = liftIO . newIORef
-
-readRef :: MonadIO m => IORef a -> m a
-readRef = liftIO . readIORef
-
-writeRef :: MonadIO m => IORef a -> a -> m ()
-writeRef ref = liftIO . writeIORef ref
-
-modifyRef :: MonadIO m => IORef a -> (a -> a) -> m ()
-modifyRef ref = liftIO . modifyIORef' ref
+fullUpdate atlas = return () -- incrementalUpdate atlas (return False)
 
 --------------------------------------------------------------------------------
 

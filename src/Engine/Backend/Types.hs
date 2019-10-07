@@ -3,6 +3,7 @@ module Engine.Backend.Types where
 import Delude
 import Foreign (Ptr)
 import Graphics.GL (GLuint, GLint, GLsizeiptr)
+import Engine.Common.Types
 
 --------------------------------------------------------------------------------
 
@@ -31,6 +32,11 @@ data TextureBuffer = TextureBuffer
    } deriving (Generic)
 instance HasWidth  TextureBuffer GLint
 instance HasHeight TextureBuffer GLint
+instance HasSize   TextureBuffer (Size Int32) where
+    size f b = fmap ss (f bb)
+        where
+        bb = Size (b^.width) (b^.height)
+        ss = \(Size w h) -> b & set width w & set height h
 
 {-
 instance HasField' "field_size" TextureBuffer (V2 GLint) where

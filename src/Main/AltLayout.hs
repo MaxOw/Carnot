@@ -2,6 +2,7 @@ module Main.AltLayout (runMain) where
 
 import Delude
 import Engine
+import Engine.Debug (resetDebugLog)
 import Reload.Utils (reacquire)
 
 import Engine.Lens.Utils (ff)
@@ -35,15 +36,14 @@ render _delta s = do
 
 runMain :: IO ()
 runMain = do
-    ctx <- reacquire 0 $ initWindow "Test" (800, 600)
-    showWindow ctx
+    ctx <- reacquire 0 $ initWindow "Test" (800, 600) True
 
     igniteEngine ctx $ Ignition
         { initializer  = initialize
         , eventHandler = handleEvent
         , integrator   = const $ return ()
         , renderer     = render
-        , finalizer    = return ()
+        , finalizer    = resetDebugLog
         }
 
 --------------------------------------------------------------------------------
@@ -68,7 +68,7 @@ initialize = do
         -- & ff#layoutToDisplay .~ margins1
         -- & ff#layoutToDisplay .~ uniflex1
         -- & ff#layoutToDisplay .~ text1
-        & ff#layoutToDisplay .~ textPadding1
+        & ff#layoutToDisplay .~ selectExample 0
         -- & ff#layoutToDisplay .~ bigtext1
         -- & ff#layoutToDisplay .~ offi
 

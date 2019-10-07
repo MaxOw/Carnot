@@ -112,17 +112,24 @@ initDrawAtlas atlas = do
     drawCall <- liftIO $ makeInitDrawCall vertexShader fragmentShader
 
     let setup = batchItemsFromAtlas atlas
-    let draw  = \proj fullBatch ->
+    let draw  = \mixColors proj fullBatch ->
           drawCall fullBatch $ \program -> do
             -- logOnce $ show $ (div (Vector.length fullBatch) 4)
 
             setupAtlas atlas program
             setUniform program "ProjectionMatrix" proj
+            -- setUniform program "MixColors" mixColors
 
             glDisable GL_DEPTH_TEST
-            glEnable GL_BLEND
-            glBlendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-            glBlendEquation GL_FUNC_ADD
+            if mixColors
+            then do
+                glEnable GL_BLEND
+                glBlendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+                glBlendEquation GL_FUNC_ADD
+            else glDisable GL_BLEND
+                -- glEnable GL_BLEND
+                -- glBlendFunc GL_ONE GL_ZERO
+                -- glBlendEquation GL_FUNC_ADD
             -- glBlendFuncSeparate
                 -- GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
                 -- GL_ONE       GL_ONE_MINUS_SRC_ALPHA
@@ -166,6 +173,7 @@ initDrawAtlas atlas = do
         , "#define MaxCustomPages " <> (show maxCustomPages)
         , "uniform sampler2D Primary[MaxPrimaryPages];"
         , "uniform sampler2D Custom[MaxCustomPages];"
+        -- , "uniform bool MixColors;"
         , "in highp vec3 vTexCoord;"
         , "in highp vec4 vColor;"
         , "in highp vec2 vPosition;"
@@ -183,6 +191,7 @@ initDrawAtlas atlas = do
         , "    color = texture2D(Custom [cust], vTexCoord.xy);"
         , "  FragColor.rgb = mix(color.rgb, vColor.rgb, vColorMix);"
         , "  FragColor.a = color.a * mix(1, vColor.a, vColorMix);"
+        -- , "  if(!MixColors) FragColor = color;"
         , "  if(vTexCoord.z < 0) FragColor = vColor;"
         , "  float r = vRadius;"
         , "  float l = length(vPosition);"

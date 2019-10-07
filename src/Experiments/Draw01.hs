@@ -56,7 +56,7 @@ instance NFData St
 
 initSt :: Bool -> Int -> IO St
 initSt depthTest count = do
-    cx <- Context.initWindow "draw01" (400, 400)
+    cx <- Context.initWindow "draw01" (400, 400) False
     dc <- initDrawCall
     let vd = Vector.fromList $ take count $ map mkVertex [0 :: Int ..]
     GLFW.swapInterval 0

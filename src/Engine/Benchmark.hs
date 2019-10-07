@@ -17,7 +17,7 @@ mkBench :: NFData st
 mkBench n initSt runSt = env i $ \st -> bench n $ whnfIO (r st)
     where
     i = do
-        ctx <- Context.initWindow n (400, 400)
+        ctx <- Context.initWindow n (400, 400) False
         makeContextCurrent (Just ctx)
         initialEventQueue    <- initEvents ctx Nothing
         initialGraphicsState <- initGraphics ctx

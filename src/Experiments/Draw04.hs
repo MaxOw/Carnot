@@ -139,7 +139,7 @@ instance NFData RenderAction where rnf _ = ()
 
 initSt :: Int -> Int -> IO St
 initSt squareSize count = do
-    cx <- Context.initWindow "draw04" (400, 400)
+    cx <- Context.initWindow "draw04" (400, 400) False
     atlas <- newAtlas
 
     img <- Unsafe.fromJust <$> loadImgToAtlas atlas "imgs/dirt.png"

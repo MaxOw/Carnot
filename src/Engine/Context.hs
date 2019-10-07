@@ -23,8 +23,8 @@ type Context = GLFW.Window
 getTime :: MonadIO m => m Float
 getTime = realToFrac . fromJust <$> liftIO GLFW.getTime
 
-initWindow :: String -> (Int, Int) -> IO Context
-initWindow title (winWidth, winHeight) = do
+initWindow :: String -> (Int, Int) -> Bool -> IO Context
+initWindow title (winWidth, winHeight) visible = do
     GLFW.setErrorCallback (Just stderrErrorCallback)
     successfulInit <- GLFW.init
     vs <- fromMaybe "" <$> GLFW.getVersionString
@@ -54,7 +54,7 @@ initWindow title (winWidth, winHeight) = do
         GLFW.windowHint $ GLFW.WindowHint'OpenGLForwardCompat forwardCompat
         GLFW.windowHint $ GLFW.WindowHint'OpenGLProfile GLFW.OpenGLProfile'Core
         GLFW.windowHint $ GLFW.WindowHint'OpenGLDebugContext True
-        GLFW.windowHint $ GLFW.WindowHint'Visible False
+        GLFW.windowHint $ GLFW.WindowHint'Visible visible
 
         mpri <- GLFW.getPrimaryMonitor
         mmod <- maybe (return Nothing) GLFW.getVideoMode mpri

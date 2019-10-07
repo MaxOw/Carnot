@@ -19,7 +19,7 @@ import Experiments.Common
 
 import Engine.Common.Types
 import Engine.Graphics
-    (renderImg, renderComposition, batchRenderActionDebug)
+    (renderImg, renderComposition, batchRenderAction)
 import Engine.Graphics.Utils
 -- import Engine.Graphics.Draw.Atlas
 import Engine.Graphics.TextureAtlas
@@ -46,7 +46,7 @@ instance NFData AtlasDesc where rnf _ = ()
 
 initSt :: Int -> Int -> IO St
 initSt squareSize count = do
-    cx <- Context.initWindow "draw04" (400, 400)
+    cx <- Context.initWindow "draw04" (400, 400) False
     atlas <- newAtlas
 
     img <- Unsafe.fromJust <$> loadImgToAtlas atlas "imgs/dirt.png"
@@ -105,7 +105,7 @@ runSt st = do
     let cx = field_context st
     withBuffers cx $ do
         let projM = field_projMat st
-        es <- batchRenderActionDebug (st^.ff#elems)
+        es <- batchRenderAction (st^.ff#elems)
         -- (st^.ff#draw) projM es
         return ()
 

@@ -8,6 +8,7 @@ module Experiments.Common
 
     , orthoMat
     , makeInitDrawCall
+    , newAtlas
 
     , loadImgToAtlas
     ) where
@@ -32,6 +33,10 @@ import qualified Data.Vector.Storable as Storable
 -- import Data.Vector (Vector)
 import qualified Data.Vector.Generic as Vector
 
+import qualified Engine.Graphics.TaskManager as TaskManager
+import qualified Engine.Graphics.TextureAtlas as Atlas
+import Engine.Graphics.TextureAtlas (TextureAtlas)
+
 import Codec.Picture (Image(..), convertRGBA8)
 
 instance NFData Context
@@ -51,6 +56,9 @@ withBuffers cx act = do
 
     Context.swapBuffers cx
     return ret
+
+newAtlas :: IO TextureAtlas
+newAtlas = Atlas.new =<< TaskManager.new
 
 orthoMat :: Context -> IO Mat4
 orthoMat cx = do

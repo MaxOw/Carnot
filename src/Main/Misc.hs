@@ -376,7 +376,7 @@ scroConf = def
 
 runMain :: IO ()
 runMain = do
-    ctx <- reacquire 0 $ initWindow "Test" (800, 600)
+    ctx <- reacquire 0 $ initWindow "Test" (800, 600) False
 
     igniteEngine ctx $ Ignition
         { initializer  = initialize

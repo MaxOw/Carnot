@@ -59,7 +59,7 @@ orthoProjection = do
 
 main :: IO ()
 main = do
-    ctx <- initWindow "Test" (800, 600)
+    ctx <- initWindow "Test" (800, 600) False
     f <- font_test
     let initialState = f
     igniteEngine ctx initialState $ Ignition

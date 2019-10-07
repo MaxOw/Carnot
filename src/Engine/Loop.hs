@@ -14,6 +14,8 @@ import Engine.Graphics
 import Criterion.Measurement (secs)
 
 import qualified Engine.Graphics.TextureAtlas as Atlas
+import qualified Engine.Graphics.TaskManager as TaskManager
+import qualified Engine.Graphics.DrawBatchCache as DrawBatchCache
 
 {-
 modifyUserState :: (us -> us) -> Engine us ()
@@ -84,11 +86,15 @@ mainLoop ignition = do
 
         -- perform incremental updates on scheduled tasks until time's up.
         incrementalUpdates timesUp
+
+        DrawBatchCache.endFrame =<< use (graphics.drawBatchCache)
+
         -- sleep for the rest of the frame
         sleepTime <- calcTimeLeft
         unlessM timesUp $ do
             -- putStrLn $ "Sleep: " <> (secs $ abs $ realToFrac sleepTime)
             threadDelaySeconds sleepTime
+
 
         close <- windowShouldClose ctx
         unless close $ loop acc' startTime
@@ -110,8 +116,10 @@ mainLoopWithCleanup ignition = mainLoop ignition `finally` cleanup
 
 incrementalUpdates :: Engine us Bool -> Engine us ()
 incrementalUpdates timesUp = do
-    atlas <- use $ graphics.textureAtlas
-    Atlas.incrementalUpdate atlas timesUp
+    -- atlas <- use $ graphics.textureAtlas
+    -- Atlas.incrementalUpdate atlas timesUp
+    tm <- use $ graphics.taskManager
+    TaskManager.performUntil tm timesUp
 
 threadDelaySeconds :: MonadIO m => Float -> m ()
 threadDelaySeconds = liftIO . threadDelay . floor . (1e6*)

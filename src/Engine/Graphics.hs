@@ -5,7 +5,10 @@ module Engine.Graphics
     , initGraphics
     , showWindow
     , draw
+    , drawOpts
     , drawRequest
+    , getBatchAndPrepIO
+    , getDrawBatchOptsIO
     , getPrepBatchIO
     , drawBatch
     , fitViewport
@@ -16,7 +19,6 @@ module Engine.Graphics
     , fullyUpdateAtlas
 
     , batchRenderAction
-    , batchRenderActionDebug
 
     , pixelsToPoints
     , pointsToPixels
@@ -37,7 +39,6 @@ module Engine.Graphics
     , renderShape
     , renderFromAtlas
     , renderComposition
-    , renderSimpleText
     , setDefaultFonts
 
     , renderActionBBox
@@ -52,11 +53,13 @@ import Linear
 -- import qualified Data.Sequence as Seq
 import qualified Data.Char as Char
 import qualified Data.List as List
+import qualified Data.Text as Text
 -- import qualified Data.Vector.Algorithms.Intro as M
 -- import qualified Data.Vector.Mutable as M
 import Graphics.GL
 import qualified Graphics.UI.GLFW as GLFW
 import Data.Vector (Vector)
+import Data.Hashable
 
 import Diagrams.Core (InSpace, Transformable)
 import qualified Diagrams.Transform as T
@@ -69,15 +72,48 @@ import Engine.Graphics.Draw.Atlas1
 import Engine.FontsManager
 import Engine.Layout.Types
 
+import Engine.Graphics.RenderAction
 import Engine.Graphics.TextureAtlas (TextureAtlas)
 import qualified Engine.Graphics.TextureAtlas as Atlas
 import qualified Engine.Context as Context
 import Engine.Types
 import Engine.Context (Context)
-import Engine.Graphics.Utils (loadImageSync, createTextureBufferFrom, mkMatHomo2)
+import Engine.Graphics.Utils
+    -- (loadImageSync, createTextureBufferFrom, mkMatHomo2)
 import Codec.Picture (DynamicImage, Image(..), convertRGBA8)
 
 import qualified Data.GrowVector as G
+
+import qualified Engine.Graphics.TaskManager as TaskManager
+import qualified Engine.Graphics.TextureCache as TextureCache
+import qualified Engine.Graphics.DrawBatchCache as DrawBatchCache
+
+import qualified Data.Colour as Color
+import qualified Data.Colour.Names as Color
+
+--------------------------------------------------------------------------------
+
+initGraphics :: MonadIO m => Context -> m GraphicsState
+initGraphics ctx = do
+    tm <- TaskManager.new
+    atlas <- Atlas.new tm
+    tch <- TextureCache.newCache tm atlas
+    dbc <- DrawBatchCache.new
+    mDPI <- Context.getPrimaryDPI
+    -- logOnce $ "Monitor DPI: " <> show mDPI
+    fm <- initFontsManager mDPI
+    (setupAtlas, drawAtlas) <- initDrawAtlas atlas
+    return $ GraphicsState
+        { _context          = ctx
+        , _setupProcedure   = setupAtlas
+        , _drawProcedure    = drawAtlas
+        , _textureAtlas     = atlas
+        , _fontsManager     = fm
+        , _defaultFontStyle = Nothing
+        , _textCache        = tch
+        , _drawBatchCache   = dbc
+        , _taskManager      = tm
+        }
 
 --------------------------------------------------------------------------------
 
@@ -97,20 +133,7 @@ initDrawProcedure atlas = do
         -- | otherwise      = return ()
 -}
 
-
-batchRenderActionDebug :: MonadIO m => RenderAction -> m DrawRequest
-batchRenderActionDebug ra = do
-    gv <- liftIO G.new
-    go gv ra
-    liftIO $ G.unsafeToVector gv
-    where
-    go gv = \case
-        RenderFromAtlas   d    -> liftIO $ G.snoc gv d
-        RenderComposition t rs -> mapM_ (go gv) (T.transform t rs)
-        -- RenderComposition t rs -> mapM_ (go gv) rs -- (T.transform t rs)
-        RenderSimpleText  d tx -> return ()
-
-batchRenderAction :: RenderAction -> Engine us DrawRequest
+batchRenderAction :: MonadIO m => RenderAction -> m DrawRequest
 batchRenderAction ra = do
     gv <- liftIO G.new
     go gv ra
@@ -120,34 +143,24 @@ batchRenderAction ra = do
         RenderFromAtlas   d    -> liftIO $ G.snoc gv d
         RenderComposition t rs -> mapM_ (go gv) (T.transform t rs)
         -- RenderComposition t rs -> mapM_ (go gv) rs -- (T.transform t rs)
-        RenderSimpleText  d tx -> do
-            rt <- makeRenderSimpleText d tx
-            go gv rt
 
 
---------------------------------------------------------------------------------
+getBatchAndPrepIO :: Engine us (RenderAction -> IO DrawBatch)
+getBatchAndPrepIO = do
+    setupProc <- use $ graphics.setupProcedure
+    return (setupProc <=< batchRenderAction)
 
-initGraphics :: MonadIO m => Context -> m GraphicsState
-initGraphics ctx = do
-    atlas <- Atlas.newAtlas
-    mDPI <- Context.getPrimaryDPI
-    -- logOnce $ "Monitor DPI: " <> show mDPI
-    fm <- initFontsManager mDPI
-    (setupAtlas, drawAtlas) <- initDrawAtlas atlas
-    return $ GraphicsState
-        { _context          = ctx
-        , _setupProcedure   = setupAtlas
-        , _drawProcedure    = drawAtlas
-        , _textureAtlas     = atlas
-        , _fontsManager     = fm
-        , _defaultFontStyle = Nothing
-        }
+getDrawBatchOptsIO :: Engine us (Bool -> Mat4 -> DrawBatch -> IO ())
+getDrawBatchOptsIO = use $ graphics.drawProcedure
 
 showWindow :: MonadIO m => Context -> m ()
 showWindow = liftIO . GLFW.showWindow
 
 draw :: Mat4 -> RenderAction -> Engine us ()
 draw projMatrix = drawRequest projMatrix <=< batchRenderAction
+
+drawOpts :: Bool -> Mat4 -> RenderAction -> Engine us ()
+drawOpts m p = drawBatchOpts m p <=< prepBatch <=< batchRenderAction
 
 drawRequest :: Mat4 -> DrawRequest -> Engine us ()
 drawRequest projMatrix = drawBatch projMatrix <=< prepBatch
@@ -163,7 +176,12 @@ getPrepBatchIO = use $ graphics.setupProcedure
 drawBatch :: Mat4 -> DrawBatch -> Engine us ()
 drawBatch projMatrix batch = do
     drawProc <- use $ graphics.drawProcedure
-    liftIO $ drawProc projMatrix batch
+    liftIO $ drawProc True projMatrix batch
+
+drawBatchOpts :: Bool -> Mat4 -> DrawBatch -> Engine us ()
+drawBatchOpts mixColors projMatrix batch = do
+    drawProc <- use $ graphics.drawProcedure
+    liftIO $ drawProc mixColors projMatrix batch
 
 loadTextureToAtlas :: FilePath -> Engine us (Maybe Img)
 loadTextureToAtlas path = do
@@ -229,24 +247,6 @@ pointsToPixels = (/64) . fromIntegral
 pixelsToPoints :: Float -> Int
 pixelsToPoints = floor . (*64)
 
-makeRenderSimpleText :: SimpleTextDesc -> Text -> Engine us RenderAction
-makeRenderSimpleText d text = do
-    fs <- uses (graphics.defaultFontStyle) (fromMaybe def)
-    let ff = fs
-           & over fonts    (maybe id (:)   $ d^.fontName)
-           & over fontSize (maybe id const $ d^.fontSize)
-           & set  color    (d^.color)
-    T.transform (d^.modelTransform) . setZIndexAtLeast (d^.zindex)
-        <$> makeRenderText (d^.boxAlign) ff text
-
-data TextLineDesc = TextLineDesc
-   { field_size            :: Size Float
-   , field_verticalOffset  :: Float
-   , field_minSpaceAdvance :: Float
-   } deriving (Generic)
-instance Default TextLineDesc
-instance HasSize TextLineDesc (Size Float)
-
 makeRenderText :: BoxAlign -> FontStyle -> Text -> Engine us RenderAction
 makeRenderText align fs text = snd <$> makeRenderTextLine align fs text
 
@@ -259,29 +259,44 @@ makeRenderTextLine align fs text = do
             m   <- getFontMetrics f (fs^.fontSize)
             dws <- mapM (toDrawCharList fh . toString) $ words text
             let s = fmap pointsToPixels $ Size (calcWidth m dws) (m^.lineHeight)
-            let rend = transformBoxAlign s align $ vertOff m
-                     $ renderComposition $ concat $ go m 0 dws
+            let shouldCache = Text.length text > 1
+            let renderText
+                     = transformBoxAlign s align $ vertOff m
+                     $ renderComposition $ concat $ go shouldCache m 0 dws
             let spaceAdv = pointsToPixels $ view minSpaceAdvance m
             let desc = def & size            .~ s
                            & verticalOffset  .~ vertOffPx m
                            & minSpaceAdvance .~ spaceAdv
+
+            let col = fs^.color
+            tch <- use $ graphics.textCache
+            let ts = floor <$> s
+            let key = hash (align, hashFontStyle fs, text)
+            rend <- if shouldCache
+                then cacheText tch ts key (Just col) renderText
+                -- then return renderText
+                else return renderText
             return (desc, rend)
         Nothing -> return (def, mempty)
-        -- Nothing -> return mempty
     where
+    cacheText tch ts key mcol ra = do
+        batchAsync <- getBatchAndPrepIO
+        drawBatchOpts <- getDrawBatchOptsIO
+        TextureCache.retriveOrAdd tch ts key mcol (batchAsync ra)
+            $ drawBatchOpts False
     vertOffPx m = pointsToPixels $ m^.verticalOffset
     vertOff m = T.translateY (negate $ vertOffPx m)
     toDrawCharList fh = fmap catMaybes . mapM (makeDrawCharStep fh)
 
-    go _ _       []  = []
-    go m !adv (w:ws) = drawWord adv w : go m (adv + off) ws
+    go _ _ _       []  = []
+    go c m !adv (w:ws) = drawWord c adv w : go c m (adv + off) ws
         where
         off = sumOf (traverse.advance) w + view minSpaceAdvance m
 
-    drawWord _       []  = []
-    drawWord !adv (l:ls) = drawChar l : drawWord (adv + off) ls
+    drawWord _ _       []  = []
+    drawWord c !adv (l:ls) = drawChar l : drawWord c (adv + off) ls
         where
-        drawChar = toRenderChar . over modelTransform trans
+        drawChar = toRenderChar (not c) . over modelTransform trans
         trans    = T.translateX $ pointsToPixels adv
         off      = l^.advance
 
@@ -523,7 +538,7 @@ renderRichSteps
             DrawRichImg t adv -> drawTex  a t : go (a + adv) xs
             _                 -> go (a + stepAdvance spaceAdv x) xs
 
-        drawChar a = toRenderChar . over modelTransform (trans a)
+        drawChar a = toRenderChar True . over modelTransform (trans a)
         trans    a = T.translateX $ pointsToPixels a
 
         drawTex a t = renderFromAtlas $ def
@@ -539,11 +554,15 @@ stepAdvance spaceAdv = \case
    DrawRichInitialSpace -> spaceAdv
    DrawRichNewline      -> 0
 
-toRenderChar :: DrawCharStep -> RenderAction
-toRenderChar x = renderFromAtlas $ def
+toRenderChar :: Bool -> DrawCharStep -> RenderAction
+toRenderChar shouldApplyColor x = renderFromAtlas $ def
     & textureId       .~ (Just $ x^.texture)
-    & color           .~ (x^.color)
+    & applyColor
     & modelTransform  .~ (x^.modelTransform)
+    where
+    applyColor = if shouldApplyColor then set color (x^.color) else id
+    -- & color           .~ (x^.color)
+    -- & colorMix        .~ 0
 
 {-
 makeRenderChar :: FontStyle -> Char -> Engine us RenderAction
@@ -585,105 +604,7 @@ orthoProjection opts = do
     let wh = over each fromIntegral canvasSize
     return $ orthoProjectionFor (uncurry Size wh) opts
 
-orthoProjectionFor
-    :: Size Float
-    -> OrthoProjectionOpts
-    -> Mat4
-orthoProjectionFor (Size sw sh) opts
-    = mkOrtho (hori aa) (vert bb)
-    where
-    wh = over each realToFrac (sw, sh)
-    (aa, bb) = fromMaybe wh (orthoNorm wh <$> opts^.normalization)
-    mkOrtho (a0, a1) (b0, b1) = ortho a0 a1 b0 b1 0 1
-
-    orthoNorm (w, h) n = case n of
-        OrthoNorm_Width  -> (  1, h/w)
-        OrthoNorm_Height -> (w/h,   1)
-        OrthoNorm_Both   -> (  1,   1)
-
-    hori x = case opts^.boxAlign.horizontal of
-        Align_Left   -> ( 0  , a  )
-        Align_Center -> (-a/2, a/2)
-        Align_Right  -> (-a  , 0  )
-        where a = x / opts^.scale
-
-    vert x = case opts^.boxAlign.vertical of
-        Align_Top    -> (-b  , 0  )
-        Align_Middle -> (-b/2, b/2)
-        Align_Bottom -> ( 0  , b  )
-        where b = x / opts^.scale
-
 --------------------------------------------------------------------------------
-
-updateZIndex :: (Word32 -> Word32) -> RenderAction -> RenderAction
-updateZIndex f = \case
-    RenderFromAtlas     ad -> RenderFromAtlas     $ over zindex f ad
-    RenderComposition t rs -> RenderComposition t $ map (updateZIndex f) rs
-    RenderSimpleText  d tx -> RenderSimpleText (over zindex f d) tx
-
-setZIndex :: Word32 -> RenderAction -> RenderAction
-setZIndex = updateZIndex . const
-
-setZIndexAtLeast :: Word32 -> RenderAction -> RenderAction
-setZIndexAtLeast = updateZIndex . max
-
-setZIndexAtMost :: Word32 -> RenderAction -> RenderAction
-setZIndexAtMost = updateZIndex . min
-
---------------------------------------------------------------------------------
-
-renderShape :: ShapeDesc -> RenderAction
-renderShape d = RenderFromAtlas $ def
-    & color          .~ (d^.color)
-    & modelTransform .~ (d^.modelTransform <> sca)
-    & radius         .~ rad
-    & zindex         .~ (d^.zindex)
-    where
-    sca = T.scaling (if d^.shapeType == SimpleCircle then 2 else 1 :: Float)
-    rad = case d^.shapeType of
-        SimpleSquare -> 2
-        SimpleCircle -> 1
-
-renderFromAtlas :: AtlasDesc -> RenderAction
-renderFromAtlas = RenderFromAtlas
-
--- renderTexture :: TextureDesc -> RenderAction
--- renderTexture = RenderTexture
-
-renderComposition :: [RenderAction] -> RenderAction
-renderComposition = RenderComposition mempty
-
-renderActionBBox :: RenderAction -> Maybe (BBox Float)
-renderActionBBox x = viaNonEmpty bboxUnion
-    $ mapMaybe (uncurry transformBBox) $ go mempty x []
-    where
-    unitBBox = BBox (-0.5) 0.5
-    transformBBox t
-        = viaNonEmpty bboxFromList . T.transform t . rectToList . bboxToRect
-    go tt = \case
-        RenderFromAtlas     ad -> ((tt <> ad^.modelTransform, unitBBox):)
-        RenderComposition t rs -> foldr (.) id $ map (go (tt<>t)) rs
-        RenderSimpleText  _ _  -> id -- TODO: calc bbox
-
-renderImg :: Img -> RenderAction
-renderImg = renderFromAtlas . renderImgRaw
-
-renderImgRaw :: Img -> AtlasDesc
-renderImgRaw i = def
-    & colorMix  .~ (i^.colorMix)
-    & color     .~ (i^.color)
-    & textureId .~ Just (i^.texture)
-    & part      .~ (i^.part)
-    & zindex    .~ (i^.zindex)
-    & T.scaleX (realToFrac sw) -- (i^.size.width)  * realToFrac (i^.part.width))
-    & T.scaleY (realToFrac sh) -- (i^.size.height) * realToFrac (i^.part.height))
-    where
-    sw = fromMaybe (i^.size.width)  $ i^?part.traverse.size.width
-    sh = fromMaybe (i^.size.height) $ i^?part.traverse.size.height
-
-
-renderSimpleText :: SimpleTextDesc -> Text -> RenderAction
-renderSimpleText = RenderSimpleText
 
 setDefaultFonts :: [FontFamilyName] -> FontSize -> Engine us ()
 setDefaultFonts fns fs = do

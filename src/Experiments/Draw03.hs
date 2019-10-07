@@ -111,7 +111,7 @@ instance NFData St
 
 initSt :: Int -> Int -> IO St
 initSt squareSize count = do
-    cx <- Context.initWindow "draw03" (400, 400)
+    cx <- Context.initWindow "draw03" (400, 400) False
     dc <- initDrawCall (fromIntegral squareSize)
     GLFW.swapInterval 0
     -- GLFW.showWindow cx

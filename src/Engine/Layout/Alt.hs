@@ -12,7 +12,7 @@ module Engine.Layout.Alt
     , vrel, vseprel, vsep, vcat
 
     , flex, uniflex, uniflexJ
-    , text, textJ
+    , text, textJ, textStyled
     , border, borderU, border1
 
     , (@@), fill, px
@@ -21,6 +21,7 @@ module Engine.Layout.Alt
     , width, height
     , horizontal, vertical
     , color, alpha
+    , absolute
 
     , makeFontStyle
 
@@ -37,8 +38,9 @@ import Linear
 import Control.Lens
 -- import qualified Data.Sequence as Seq
 
+import Data.Hashable (hash)
 import Engine.FontsManager.Types (FontStyle, makeFontStyle)
-import Engine.Context (getFramebufferSize)
+import Engine.Context (getFramebufferSize, getTime)
 import Engine.Types (Engine, graphics)
 -- import Engine.FontsManager.Types
 import Engine.Graphics.Types
@@ -60,6 +62,13 @@ import Engine.HasField
     , padding, minSpaceAdvance
     )
 
+import qualified Engine.Graphics.DrawBatchCache as DrawBatchCache
+
+-- TODO:
+-- 1. add spaned text formatting.
+-- 2. add newlines text splitting.
+-- 3. add spaned text utility function.
+
 import qualified Data.Colour as Color
 -- import qualified Data.Colour.Names as Color
 
@@ -70,11 +79,12 @@ instance Default Bool where def = False
 --------------------------------------------------------------------------------
 
 newtype Pixels = Pixels { unPixels :: Float }
-    deriving (Generic, Eq, Ord, Num, Fractional, Default)
+    deriving (Generic, Eq, Ord, Num, Fractional, Default, Hashable)
 data Sizing
    = Sizing_Fill   Float
    | Sizing_Pixels Pixels
    deriving (Generic)
+instance Hashable Sizing
 
 fill :: Prism' Sizing Float
 fill = cc#_Sizing_Fill
@@ -101,18 +111,21 @@ data FlexOpts = FlexOpts
    , field_maxLineHeight   :: Pixels
    , field_justify         :: Bool
    } deriving (Generic)
+instance Hashable FlexOpts
 instance Default FlexOpts
 
 data WordRequest = WordRequest
    { field_fontStyle :: FontStyle
    , field_content   :: Text
    } deriving (Generic)
+instance Hashable WordRequest
 
 data TextRequest = TextRequest
    { field_justify :: Bool
    , field_content :: [WordRequest]
    } deriving (Generic)
 instance Default TextRequest
+instance Hashable TextRequest
 
 data TextResult = TextResult
    { field_size            :: Size Pixels
@@ -126,7 +139,10 @@ data PrimitiveT a
    | Primitive_Composition [LayoutT a]
    | Primitive_Lineup LineupDirection [(Sizing, LayoutT a)]
    | Primitive_Flex FlexOpts [(Pixels, LayoutT a)]
+   | Primitive_Absolute (V2 Sizing) (LayoutT a)
    | Primitive_Text a
+   deriving (Generic)
+instance Hashable a => Hashable (PrimitiveT a)
 -- type Primitive = PrimitiveT TextRequest
 
 data PrimitiveOut
@@ -143,14 +159,18 @@ data LayoutT a = Layout
 instance HasSize   (LayoutT a) (Size Sizing)
 instance HasWidth  (LayoutT a) Sizing where width  = size.width
 instance HasHeight (LayoutT a) Sizing where height = size.height
+instance Hashable a => Hashable (LayoutT a)
 type Layout       = LayoutT TextRequest
 type LayoutResult = LayoutT TextResult
+
+instance Semigroup Layout where sconcat = composition . toList
+instance Monoid    Layout where mempty  = def
 
 instance Default (LayoutT a) where
     def = Layout
         { field_size      = pure (1 @@ fill)
         , field_align     = Center
-        , field_padding   = pure $ 0 @@ px
+        , field_padding   = pure (0 @@ px)
         , field_primitive = Primitive_Composition []
         }
 
@@ -234,8 +254,9 @@ resolveLayout = go
     go x = case x^.primitive of
         Primitive_FillColor   cl -> reset x $ Primitive_FillColor cl
         Primitive_Composition ls -> reset x . Primitive_Composition =<< mapM go  ls
-        Primitive_Lineup dir  ls -> reset x . Primitive_Lineup dir  =<< mapM gos ls
-        Primitive_Flex  opts  ls -> reset x . Primitive_Flex  opts  =<< mapM gos ls
+        Primitive_Lineup  dir ls -> reset x . Primitive_Lineup dir  =<< mapM gos ls
+        Primitive_Flex   opts ls -> reset x . Primitive_Flex  opts  =<< mapM gos ls
+        Primitive_Absolute   p l -> reset x . Primitive_Absolute p =<< go l
         Primitive_Text        ts -> renderTextPrimitive x ts
         where
         gos (a, b) = (a,) <$> go b
@@ -248,8 +269,9 @@ computeLayout windowSize = go (Rect 0 windowSize)
     go parentRect x = case x^.primitive of
         Primitive_FillColor   cl -> computeFillColor   layoutRect cl
         Primitive_Composition ls -> computeComposition layoutRect ls
-        Primitive_Lineup dir  ls -> computeLineup  dir layoutRect ls (x^.align)
-        Primitive_Flex  opts  ls -> computeFlex   opts layoutRect ls (x^.align)
+        Primitive_Lineup  dir ls -> computeLineup  dir layoutRect ls (x^.align)
+        Primitive_Flex   opts ls -> computeFlex   opts layoutRect ls (x^.align)
+        Primitive_Absolute   p l -> computeAbsolute  p x l
         Primitive_Text         t -> computeText       (textRect t) t
         -- Primitive_Text         t -> computeText        layoutRect t
         where
@@ -371,6 +393,15 @@ computeLayout windowSize = go (Rect 0 windowSize)
             where
             h = maxLineHeight
 
+    computeAbsolute p x l
+        = LayoutOut outRect
+        $ PrimitiveOut_Composition [go outRect l]
+        where
+        -- outRect = calcAbsoluteRect p (x^.size) windowSize (x^.align)
+        outRect = computeLayoutRect (Rect 0 windowSize) x
+            & offset +~ calcAbsolutePos p windowSize
+            -- & size .~ x^.size
+
     computeText outRect t
         = LayoutOut outRect -- rr
         $ PrimitiveOut_RenderAction $ T.translateX xf (t^.ff#action)
@@ -378,6 +409,16 @@ computeLayout windowSize = go (Rect 0 windowSize)
         xf = negate $ unPixels $ t^.size.width/2
         -- xf = negate $ unPixels $ t^.size.width/2
         -- rr = outRect & size .~ t^.size
+
+calcAbsolutePos :: V2 Sizing -> Size Pixels -> V2 Pixels
+calcAbsolutePos pos windowSize = outPos
+    where
+    Size w h = windowSize
+    outPos  = V2 (toPx w (pos^._x)) (toPx h (pos^._y)) -- + off
+    -- outSize = max 0 <$> Size (toPx w (siz^.width)) (toPx h (siz^.height))
+    toPx r  = \case
+        Sizing_Pixels x -> x
+        Sizing_Fill   f -> r * Pixels f
 
 distribLines :: Pixels -> Pixels -> [(Pixels, a)] -> [[(Pixels, a)]]
 distribLines _        _          [] = []
@@ -431,7 +472,10 @@ makeRenderLayout layoutIn = do
 drawLayout :: Layout -> Engine us ()
 drawLayout lay = do
     projM <- orthoProjection $ def & boxAlign .~ BottomLeft
-    draw projM =<< makeRenderLayout lay
+    dbc <- use $ graphics.drawBatchCache
+    batchAndPrep <- getBatchAndPrepIO
+    let toBatch = liftIO . batchAndPrep <=< makeRenderLayout
+    drawBatch projM =<< DrawBatchCache.retriveOrAdd dbc (hash lay) lay toBatch
 
 makeRenderLayoutOut :: LayoutOut -> Engine us RenderAction
 makeRenderLayoutOut layoutOut = go (layoutOut^.rect) (layoutOut^.primitive)
@@ -528,6 +572,13 @@ uniflexJ spaceSize maxLineHeight = flex opts
 
 --------------------------------------------------------------------------------
 
+textStyled :: [(FontStyle, Text)] -> Layout
+textStyled [] = def
+textStyled ls = simplePrimitive $ Primitive_Text $ def
+    & content .~ concatMap f ls
+    where
+    f (s,t) = map (WordRequest s) $ words t
+
 text :: FontStyle -> Text -> Layout
 text fs t = simplePrimitive $ Primitive_Text $ def
     & content .~ map (WordRequest fs) ws
@@ -561,4 +612,9 @@ borderU s c = border $ def & each.width .~ s & each.color .~ c
 
 border1 :: Color -> Layout -> Layout
 border1 = borderU (1 @@ px)
+
+--------------------------------------------------------------------------------
+
+absolute :: V2 Sizing -> Layout -> Layout
+absolute p = simplePrimitive . Primitive_Absolute p
 

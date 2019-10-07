@@ -1,5 +1,5 @@
 Name          : Carnot
-Version       : 0.1.18.9
+Version       : 0.1.24.0
 License       : BSD3
 -- License-File  : LICENSE
 Author        : Maksymilian Owsianny
@@ -28,7 +28,6 @@ library
   -- hs-source-dirs:   src, example
   -- main-is:          Main.hs
   ghc-options:
-    -O2
     -Wall
     -fdiagnostics-color=always
     -fno-warn-missing-pattern-synonym-signatures
@@ -62,6 +61,7 @@ library
     , GeneralizedNewtypeDeriving
 
     , BangPatterns
+    , StrictData
 
   exposed-modules:
         Engine
@@ -77,6 +77,7 @@ library
         Engine.Events
         Engine.Events.Types
         Engine.Graphics
+        Engine.Graphics.RenderAction
         Engine.Graphics.Buffer
         Engine.Graphics.Buffer.Types
         Engine.Graphics.Utils
@@ -85,8 +86,15 @@ library
         -- Engine.Graphics.Draw.Shape
         Engine.Graphics.TextureAtlas
         Engine.Graphics.TextureAtlas.Types
+        Engine.Graphics.TextureCache
+        Engine.Graphics.TextureCache.Types
+        Engine.Graphics.DrawBatchCache
+        Engine.Graphics.DrawBatchCache.Types
+        Engine.Graphics.TaskManager
         Engine.Graphics.Scroller
         Engine.Graphics.Scroller.Types
+        Engine.Graphics.Scroller.Cells
+        Engine.Graphics.Scroller.TypesCells
         -- Engine.Graphics.Draw.Atlas
         Engine.Graphics.Draw.Atlas1
         Engine.Graphics.Draw.Common
@@ -146,6 +154,8 @@ library
         Data.ZMap
 
   build-depends : base >= 4.5 && < 5.0
+                , text
+                , hashable
                 , stm
                 , mtl
                 , array
@@ -209,6 +219,7 @@ executable Carnot
   main-is:          Main.hs
   ghc-options:
     -O2
+    -threaded
     -Wall
     -fdiagnostics-color=always
     -fno-warn-missing-pattern-synonym-signatures
@@ -245,6 +256,8 @@ executable Carnot
     , BangPatterns
 
   build-depends : base >= 4.5 && < 5.0
+                , text
+                , hashable
                 , stm
                 , mtl
                 , array

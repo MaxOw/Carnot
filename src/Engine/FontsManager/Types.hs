@@ -1,14 +1,17 @@
 {-# Language StrictData #-}
 {-# Language PatternSynonyms #-}
+{-# Language StandaloneDeriving #-}
 {-# OPTIONS_GHC -fno-warn-missing-pattern-synonym-signatures #-}
 module Engine.FontsManager.Types where
 
 import Delude
 import qualified Data.Colour as Color
+import Data.Hashable
 
 import Graphics.Rendering.FreeType.Internal.PrimitiveTypes
 import Graphics.Rendering.FreeType.Internal.Face (FT_Face)
 import Graphics.Rendering.FreeType.Internal.Library (FT_Library)
+import Data.Colour.SRGB
 
 import Engine.Backend.Types (TextureBuffer)
 
@@ -116,7 +119,21 @@ data FontStyleF a = FontStyle
    , field_italic        :: Bool
    , field_underscore    :: Bool
    , field_strikethrough :: Bool
-   } deriving (Generic)
+   } deriving (Eq, Generic)
+instance Hashable a => Hashable (FontStyleF a)
+
+{-
+    hashWithSalt s (FontStyle a b c d e f g)
+        = hashWithSalt s (a, b, fromAlphaColor c, d, e, f, g)
+        where
+        fromAlphaColor c = (r, g, b, a)
+            where
+            RGB r g b = toSRGB $ Color.over c Color.black
+            a = Color.alphaChannel c
+-}
+
+hashFontStyle :: Hashable a => FontStyleF a -> Int
+hashFontStyle (FontStyle a b _ d e f g) = hash (a, b, d, e, f, g)
 
 -- makeFontStyle :: FontHierarchy -> FontSize -> FontStyle
 makeFontStyle :: a -> FontSize -> FontStyleF a

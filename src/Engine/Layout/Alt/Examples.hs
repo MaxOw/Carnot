@@ -3,6 +3,7 @@ module Engine.Layout.Alt.Examples where
 import Relude
 import Control.Lens hiding (para)
 import Engine.Layout.Alt
+import Linear (V2(..))
 import Data.Vector (Vector)
 import qualified Data.Vector as Vector
 
@@ -124,7 +125,8 @@ text1 = composition
     & padding.each .~ 20 @@ px
     where
     fs = makeFontStyle ["Arial"] 12
-       & color .~ Color.opaque Color.gray
+       -- & color .~ Color.opaque Color.gray
+       & color .~ Color.opaque Color.white
 
 textPadding1 :: Layout
 textPadding1 = textline fs "This is test"
@@ -193,18 +195,44 @@ offi = vseprel (8 @@ px)
     fs = makeFontStyle ["Arial", "SourceHanSerif"] 10
        & color .~ Color.opaque Color.gray
 
+absolute1 :: Layout
+absolute1 = absolute pos (boxRowRel1 & size.each .~ 1 @@ fill) -- fillColor Color.red)
+    & size.each .~ (200 @@ px)
+    -- & align .~ TopLeft
+    -- & align .~ BottomRight
+    where
+    pos = V2 (-50 @@ px) (-50 @@ px)
+    -- pos = pure (0 @@ px) -- V2 (20 @@ px) (50 @@ px)
+    -- pos = pure (-50 @@ px) -- V2 (20 @@ px) (50 @@ px)
+    -- pos = V2 (-20 @@ px) (0 @@ px)
+
+textStyled1 :: Layout
+textStyled1 = textStyled
+    [ (makeFs Color.red, "Test ") ]
+    -- [ (makeFs Color.black, "This is some")
+    -- , (makeFs Color.red  , "random text")
+    -- , (makeFs Color.black, "like this.")
+    -- ]
+
+-- makeFs :: Color -> FontStyle
+makeFs c = makeFontStyle ["Arial", "SourceHanSerif"] 10
+       & color .~ Color.opaque c
+
 --------------------------------------------------------------------------------
 
 examples :: Vector Layout
 examples = Vector.fromList
-    [ padding1
+    [ text1
+    , textStyled1
+    , absolute1
+    , padding1
     , box1
     , boxRow1
     , boxRowSep1
     , boxRowRel1
     , complex1
     , uniflex1
-    , text1
+    -- , text1
     , bigtext1
     , textPadding1
     , offi

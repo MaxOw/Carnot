@@ -12,6 +12,7 @@ import Control.Concurrent.STM.TChan (TChan)
 import Graphics.GL (GLint)
 
 import Engine.Backend.Types
+import Engine.Graphics.TaskManager (TaskManager)
 
 --------------------------------------------------------------------------------
 
@@ -75,6 +76,7 @@ data TextureAtlas  = TextureAtlas
    -- , field_secondaryPages  :: IORef AtlasPages
    , field_customPages     :: IORef (Vector TextureBuffer)
    , field_tasks           :: TChan AtlasTask
+   , field_taskManager     :: TaskManager
    } deriving (Generic)
 
 newtype PageId = PageId { unPageId :: Int }

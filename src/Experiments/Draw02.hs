@@ -72,7 +72,7 @@ instance NFData St
 
 initSt :: Bool -> Int -> Int -> Bool -> Bool -> Bool -> IO St
 initSt depthTest squareSize count distribute discard blend = do
-    cx <- Context.initWindow "draw02" (400, 400)
+    cx <- Context.initWindow "draw02" (400, 400) False
     dc <- initDrawCall (fromIntegral squareSize) discard
     GLFW.swapInterval 0
     -- GLFW.showWindow cx

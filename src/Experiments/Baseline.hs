@@ -27,7 +27,7 @@ instance NFData St
 
 initSt :: IO St
 initSt = do
-    cx <- Context.initWindow "baseline" (400, 400)
+    cx <- Context.initWindow "baseline" (400, 400) False
     GLFW.swapInterval 0
     -- GLFW.showWindow cx
     return $ St

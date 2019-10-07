@@ -20,7 +20,8 @@ data Sizing
    | Sizing_WindowPct    Percent      -- [0-1] = Percent of window size
    | Sizing_Absolute     AbsoluteSize --       = Absolute value in pixels
    | Sizing_Fill         FillPart     -- [0-*] = Fill leftover proportionally
-   deriving (Show)
+   deriving (Generic, Show)
+
 makePrisms ''Sizing
 
 px :: Prism' Sizing AbsoluteSize
@@ -42,6 +43,8 @@ instance Default Sizing where def = Sizing_Absolute 0
 data LineupDirection
    = LineupDirection_Vertical
    | LineupDirection_Horizontal
+   deriving (Generic)
+instance Hashable LineupDirection
 
 instance HasPatternVertical LineupDirection where
     _PatternVertical = LineupDirection_Vertical
@@ -56,6 +59,7 @@ data BoxEdges a = BoxEdges
    , field_bottom :: a
    , field_right  :: a
    } deriving (Generic, Functor, Foldable, Traversable)
+instance Hashable a => Hashable (BoxEdges a)
 instance Default a => Default (BoxEdges a) where
     def = BoxEdges
         { field_top    = def
@@ -91,7 +95,7 @@ traverseHorizontal f (BoxEdges a b c d) = BoxEdges
 
 newtype Size a = MkSize (V2 a) deriving
     ( Eq, Ord, Num, Functor, Applicative, Traversable
-    , Foldable, Show, Generic, NFData, Fractional)
+    , Foldable, Show, Generic, NFData, Fractional, Hashable)
 -- instance R1 Size where _x  = _Wrapped._x
 -- instance R2 Size where _xy = _Wrapped._xy
 makeWrapped ''Size
@@ -146,7 +150,7 @@ subRectOf ra rb = Rect o s
 data BBox a = BBox
    { field_minPoint :: V2 a
    , field_maxPoint :: V2 a
-   } deriving (Eq, Ord, Show, Generic)
+   } deriving (Eq, Ord, Show, Generic, Functor)
 makeFieldsCustom ''BBox
 instance NFData a => NFData (BBox a)
 
@@ -199,16 +203,21 @@ data VerticalAlign
    = Align_Top
    | Align_Middle
    | Align_Bottom
+   deriving (Eq, Generic)
+instance Hashable VerticalAlign
 
 data HorizontalAlign
    = Align_Left
    | Align_Center
    | Align_Right
+   deriving (Eq, Generic)
+instance Hashable HorizontalAlign
 
 data BoxAlign = BoxAlign
    { field_vertical   :: VerticalAlign
    , field_horizontal :: HorizontalAlign
-   }
+   } deriving (Eq, Generic)
+instance Hashable BoxAlign
 makeFieldsCustom ''BoxAlign
 
 pattern BoxAlign_TopLeft   = BoxAlign Align_Top Align_Left

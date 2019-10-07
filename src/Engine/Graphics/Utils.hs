@@ -16,10 +16,11 @@ import Codec.Picture
     (DynamicImage(..), Image(..), PixelRGBA8, convertRGBA8, readImage)
 -- import System.Directory (findFile)
 
-import Diagrams.Transform
+import Diagrams.Transform hiding (scale)
 import Diagrams.Transform.Matrix
 
 import Graphics.GL
+import Engine.Common.Types
 import Engine.Backend.Types
 import Engine.Graphics.Types as Engine.Graphics.Utils
 import Data.Colour.SRGB
@@ -36,7 +37,8 @@ fromColor c = V4 r g b 1
 fromAlphaColor :: AlphaColor -> V4 Float
 fromAlphaColor c = V4 r g b a
     where
-    RGB r g b = toSRGB $ pureColor Color.black c
+    -- RGB r g b = toSRGB $ pureColor Color.black c
+    RGB r g b = toSRGB $ Color.over c Color.black
     a = Color.alphaChannel c
 
 pureColor :: (Ord a, Fractional a) => Colour a -> AlphaColour a -> Colour a
@@ -252,8 +254,15 @@ createTexture2dWith setTextureAction = do
     glTexParameteri GL_TEXTURE_2D GL_TEXTURE_WRAP_S GL_CLAMP_TO_EDGE
     glTexParameteri GL_TEXTURE_2D GL_TEXTURE_WRAP_T GL_CLAMP_TO_EDGE
     glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER GL_LINEAR
-    -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER GL_NEAREST
     glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_NEAREST
+
+    -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER GL_NEAREST
+    -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_NEAREST
+
+    -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER GL_NEAREST
+    -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_LINEAR
+
+    -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER GL_LINEAR
     -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_LINEAR
 
     setTextureAction
@@ -300,9 +309,18 @@ createTextureBuffer w h ptr = do
     glBindTexture   GL_TEXTURE_2D tex
     glTexParameteri GL_TEXTURE_2D GL_TEXTURE_WRAP_S GL_CLAMP_TO_EDGE
     glTexParameteri GL_TEXTURE_2D GL_TEXTURE_WRAP_T GL_CLAMP_TO_EDGE
-    glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER GL_LINEAR
-    glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_LINEAR
+    -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER GL_LINEAR
     -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_NEAREST
+
+    glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER GL_NEAREST
+    glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_NEAREST
+
+    -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER GL_NEAREST
+    -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_LINEAR
+
+    -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER GL_LINEAR
+    -- glTexParameteri GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_LINEAR
+
     texImage2D_RGBA w h ptr
 
     glFramebufferTexture2D
@@ -319,19 +337,59 @@ createTextureBuffer w h ptr = do
         }
 
 withTextureBuffer :: MonadIO m => TextureBuffer -> m a -> m a
-withTextureBuffer buf action = do
+withTextureBuffer buf = withTextureBufferPart buf pt
+    where
+    pt = Rect 0 $ Size (buf^.width) (buf^.height)
+
+withTextureBufferPart :: MonadIO m => TextureBuffer -> Rect Int32 -> m a -> m a
+withTextureBufferPart buf pt action = do
     glDisable GL_DEPTH_TEST
-    let (w, h) = (buf^.width, buf^.height)
-    glViewport 0 0 w h
-    glBindFramebuffer GL_FRAMEBUFFER (buf^.framebuffer)
+    let V2 x y = pt^.offset
+    let Size w h = pt^.size
+    glViewport x y w h
+    withScissor pt $ do
+        glBindFramebuffer GL_FRAMEBUFFER (buf^.framebuffer)
+        ret <- action
+        glBindFramebuffer GL_FRAMEBUFFER noFramebuffer
+        return ret
+
+withScissor :: MonadIO m => Rect Int32 -> m r -> m r
+withScissor r action = do
+    let V2   x y = r^.offset
+    let Size w h = r^.size
+    glScissor x y w h
+    glEnable GL_SCISSOR_TEST
     ret <- action
-    glBindFramebuffer GL_FRAMEBUFFER noFramebuffer
+    glDisable GL_SCISSOR_TEST
     return ret
 
 doneTextureBuffer :: MonadIO m => TextureBuffer -> m ()
 doneTextureBuffer b = do
     delObject glDeleteTextures     $ b^.texture
     delObject glDeleteFramebuffers $ b^.framebuffer
+
+shiftTexture
+    :: MonadIO m
+    => V2 Int32      -- ^ offset in pixels
+    -> TextureBuffer -- ^ source texture
+    -> TextureBuffer -- ^ target texture
+    -> m ()
+shiftTexture pos source target = do
+    let srcName = source^.texture
+    let srcX    = max 0 $ pos^._x
+    let srcY    = max 0 $ pos^._y
+
+    let dstName = target^.texture
+    let dstX    = max 0 $ negate $ pos^._x
+    let dstY    = max 0 $ negate $ pos^._y
+
+    let srcWidth  = source^.width  - (abs $ pos^._x)
+    let srcHeight = source^.height - (abs $ pos^._y)
+
+    glCopyImageSubData
+        srcName GL_TEXTURE_2D 0 srcX srcY 0
+        dstName GL_TEXTURE_2D 0 dstX dstY 0
+        srcWidth srcHeight 1
 
 --------------------------------------------------------------------------------
 
@@ -364,4 +422,32 @@ loadImageSync path = do
 glGetInteger :: MonadIO m => GLenum -> m GLint
 glGetInteger pname = liftIO $ alloca $ \ptr ->
     glGetIntegerv pname ptr >> peek ptr
+
+orthoProjectionFor
+    :: Size Float
+    -> OrthoProjectionOpts
+    -> Mat4
+orthoProjectionFor (Size sw sh) opts
+    = mkOrtho (hori aa) (vert bb)
+    where
+    wh = over each realToFrac (sw, sh)
+    (aa, bb) = fromMaybe wh (orthoNorm wh <$> opts^.normalization)
+    mkOrtho (a0, a1) (b0, b1) = ortho a0 a1 b0 b1 0 1
+
+    orthoNorm (w, h) n = case n of
+        OrthoNorm_Width  -> (  1, h/w)
+        OrthoNorm_Height -> (w/h,   1)
+        OrthoNorm_Both   -> (  1,   1)
+
+    hori x = case opts^.boxAlign.horizontal of
+        Align_Left   -> ( 0  , a  )
+        Align_Center -> (-a/2, a/2)
+        Align_Right  -> (-a  , 0  )
+        where a = x / opts^.scale
+
+    vert x = case opts^.boxAlign.vertical of
+        Align_Top    -> (-b  , 0  )
+        Align_Middle -> (-b/2, b/2)
+        Align_Bottom -> ( 0  , b  )
+        where b = x / opts^.scale
 
