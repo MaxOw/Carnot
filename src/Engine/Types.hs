@@ -21,6 +21,7 @@ type Renderer     us = Delta -> us -> Engine us ()
 
 data Ignition userState = Ignition
    { initializer  :: Engine ()    userState
+   , stateSetup   :: Engine userState    ()
    , eventHandler :: EventHandler userState
    , integrator   :: Integrator   userState
    , renderer     :: Renderer     userState

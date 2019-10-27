@@ -1,5 +1,5 @@
 # { nixpkgs ? import <nixpkgs> {}, compiler ? "ghc843" }:
-{ nixpkgs ? import <nixpkgs> {}, compiler ? "ghc863" }:
+{ nixpkgs ? import <nixpkgs> {}, compiler ? "ghc865" }:
 let ghc = nixpkgs.haskell.packages.${compiler}.override {
       overrides = self: super: {
         # TODO: get packages from github

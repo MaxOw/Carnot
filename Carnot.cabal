@@ -1,5 +1,5 @@
 Name          : Carnot
-Version       : 0.1.24.0
+Version       : 0.1.25.1
 License       : BSD3
 -- License-File  : LICENSE
 Author        : Maksymilian Owsianny
@@ -254,6 +254,7 @@ executable Carnot
     , GeneralizedNewtypeDeriving
 
     , BangPatterns
+    , StrictData
 
   build-depends : base >= 4.5 && < 5.0
                 , text

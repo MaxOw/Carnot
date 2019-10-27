@@ -1,3 +1,4 @@
+{-# Options_GHC -fno-warn-orphans #-}
 {-# Language RankNTypes #-}
 module Delude
     ( module Exports

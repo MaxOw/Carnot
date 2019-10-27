@@ -474,8 +474,10 @@ drawLayout lay = do
     projM <- orthoProjection $ def & boxAlign .~ BottomLeft
     dbc <- use $ graphics.drawBatchCache
     batchAndPrep <- getBatchAndPrepIO
+    canvasSize <- getCanvasSize
+    let lid = hash (canvasSize, lay)
     let toBatch = liftIO . batchAndPrep <=< makeRenderLayout
-    drawBatch projM =<< DrawBatchCache.retriveOrAdd dbc (hash lay) lay toBatch
+    drawBatch projM =<< DrawBatchCache.retriveOrAdd dbc lid lay toBatch
 
 makeRenderLayoutOut :: LayoutOut -> Engine us RenderAction
 makeRenderLayoutOut layoutOut = go (layoutOut^.rect) (layoutOut^.primitive)

@@ -3,7 +3,8 @@ module Main where
 
 import Relude (IO)
 -- import Main.Misc
-import Main.AltLayout
+-- import Main.AltLayout
+import Main.QuadTree
 -- import Main.Scroller
 -- import Engine.Benchmark
 

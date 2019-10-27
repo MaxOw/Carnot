@@ -141,5 +141,7 @@ igniteEngine ctx ignition = do
             , _graphics   = initialGraphicsState
             }
 
-    (st, engineState) <- runStateT (initializer ignition) $ initialEngineState
-    evalStateT (mainLoopWithCleanup ignition) $ engineState { _userState = st }
+    (st, engineState) <- runStateT (initializer ignition) initialEngineState
+    engineStateSetup <- execStateT (stateSetup ignition)
+        $ engineState { _userState = st }
+    evalStateT (mainLoopWithCleanup ignition) engineStateSetup

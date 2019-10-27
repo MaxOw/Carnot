@@ -34,7 +34,7 @@ insert p@(V2 x y) a q = over tree (go (0 :: Int) 0 fullSize) q
 
     go !depth !pivot !nodeSize = \case
         Nothing -> Just $ Leaf $ Set.singleton posPA
-        Just qt -> Just $ insertTree (depth+1) pivot nodeSize qt
+        Just qt -> let !it = insertTree (depth+1) pivot nodeSize qt in Just it
 
     insertTree !depth !pivot !nodeSize = \case
         Node r -> Node $ insertNode depth pivot nodeSize r
