@@ -27,31 +27,11 @@ initWindow :: String -> (Int, Int) -> Bool -> IO Context
 initWindow title (winWidth, winHeight) visible = do
     GLFW.setErrorCallback (Just stderrErrorCallback)
     successfulInit <- GLFW.init
-    vs <- fromMaybe "" <$> GLFW.getVersionString
-    putStrLn vs
-    -- if init failed, we exit the program
+    putStrLn =<< fromMaybe "" <$> GLFW.getVersionString
     if not successfulInit then error "GLFW Init failed" else do
-        mw <- tryOpenWindow 4 5 True
-        case mw of
-            Nothing -> do
-                GLFW.terminate
-                error "Window creation failed"
-            Just win -> do
-                GLFW.makeContextCurrent mw
-                -- GLFW.swapInterval 1 --vsync
-                GLFW.swapInterval 0 --vsync off
-                return win
-
-    where
-    tryOpenWindow :: Int -> Int -> Bool -> IO (Maybe Context)
-    tryOpenWindow majVersion minVersion forwardCompat = do
-        printf
-            "Opening Window (ContextVersoin %d.%d, ForwardCompatiblity = %s)\n"
-            majVersion minVersion (show forwardCompat :: String)
-
-        GLFW.windowHint $ GLFW.WindowHint'ContextVersionMajor majVersion
-        GLFW.windowHint $ GLFW.WindowHint'ContextVersionMinor minVersion
-        GLFW.windowHint $ GLFW.WindowHint'OpenGLForwardCompat forwardCompat
+        GLFW.windowHint $ GLFW.WindowHint'ContextVersionMajor 4
+        GLFW.windowHint $ GLFW.WindowHint'ContextVersionMinor 5
+        GLFW.windowHint $ GLFW.WindowHint'OpenGLForwardCompat True
         GLFW.windowHint $ GLFW.WindowHint'OpenGLProfile GLFW.OpenGLProfile'Core
         GLFW.windowHint $ GLFW.WindowHint'OpenGLDebugContext True
         GLFW.windowHint $ GLFW.WindowHint'Visible visible
@@ -62,8 +42,15 @@ initWindow title (winWidth, winHeight) visible = do
         let w = fromMaybe winWidth  $ GLFW.videoModeWidth  <$> mmod
         let h = fromMaybe winHeight $ GLFW.videoModeHeight <$> mmod
         mwin <- GLFW.createWindow w h title Nothing Nothing
-        return mwin
-
+        case mwin of
+            Nothing -> do
+                GLFW.terminate
+                error "Window creation failed"
+            Just win -> do
+                GLFW.makeContextCurrent mwin
+                GLFW.swapInterval 0 --vsync off
+                return win
+    where
     stderrErrorCallback :: GLFW.ErrorCallback
     -- stderrErrorCallback _ = hPutStrLn stderr
     stderrErrorCallback _ = hPutStrLn stdout

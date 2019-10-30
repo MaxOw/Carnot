@@ -61,7 +61,7 @@ render _delta s = do
     let viewM = mkMatHomo2 (T.translate spos mempty)
     projM <- orthoProjection $ def
 
-    Scroller.update scr pos $ \bb -> do
+    Scroller.update scr True pos $ \bb -> do
         return $ renderComposition
             [ renderSquare Color.red
             , renderSquare Color.red & T.translate 4
@@ -73,10 +73,10 @@ render _delta s = do
         -- return mempty
 
     fitViewport
-    clearColorWhite
+    clearColorBlack
     let viewM = mkMatHomo2 (T.translate spos mempty)
     projM <- orthoProjection $ def
-        & set scale 0.3
+        & set scale 0.1
         -- & boxAlign .~ Center
     -- draw projM $ s^.ff#renderCopy
     let projViewM = projM !*! viewM
@@ -114,6 +114,7 @@ runMain = do
 
     igniteEngine ctx $ Ignition
         { initializer  = initialize
+        , stateSetup   = return ()
         , eventHandler = handleEvent
         , integrator   = const $ return ()
         , renderer     = render

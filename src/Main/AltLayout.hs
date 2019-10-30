@@ -40,6 +40,7 @@ runMain = do
 
     igniteEngine ctx $ Ignition
         { initializer  = initialize
+        , stateSetup   = return ()
         , eventHandler = handleEvent
         , integrator   = const $ return ()
         , renderer     = render

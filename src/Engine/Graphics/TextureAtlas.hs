@@ -12,6 +12,7 @@ module Engine.Graphics.TextureAtlas
     , swapCustomPage
 
     , addTexture
+    , prettyPrintSSEC
 
     -- , incrementalUpdate
     , fullUpdate
@@ -19,7 +20,7 @@ module Engine.Graphics.TextureAtlas
 
 import Delude
 import Linear
--- import Text.Printf (printf)
+import Text.Printf (printf)
 import Foreign hiding (void, new)
 import Graphics.GL
 import Engine.Graphics.Utils
@@ -150,6 +151,8 @@ new tm = do
     primary   <- newIORef =<< newAtlasPages maxTexUnits maxTexSize
     -- secondary <- newIORef =<< newAtlasPages maxTexUnits maxTexSize
     custom <- newIORef Vector.empty
+    let maxPagesCount = fromIntegral maxTexUnits
+    statsRef <- newIORef $ TextureAtlasStats $ Vector.replicate maxPagesCount 0
     tasksChan <- newTChanIO
     return TextureAtlas
         { field_maxTextureUnits = maxTexUnits
@@ -158,6 +161,7 @@ new tm = do
         , field_primaryPages    = primary
         -- , field_secondaryPages  = secondary
         , field_customPages     = custom
+        , field_stats           = statsRef
         , field_tasks           = tasksChan
         , field_taskManager     = tm
         }
@@ -279,7 +283,9 @@ addTexture atlas buf = whenNothingM_ lookupLoc $ do
                     logOnceFor tex $ "Unable to add texture to atlas. " <>
                                      "No more empty slots left of that size."
                     return ()
-                Just _ -> do
+                Just l -> do
+                    modifyIORef' (atlas^.stats) (updateSSEC (l^.page) slotSize)
+                    -- prettyPrintSSEC atlas
                     -- let ss x = show x :: String
                     -- putStrLn ((printf "%15s %15s %15s"
                         -- (ss $ l^.offset) (ss slotSize) (ss texSize)) :: String)
@@ -290,6 +296,22 @@ addTexture atlas buf = whenNothingM_ lookupLoc $ do
     maxTexSize = atlas^.maxTextureSize
     texSize    = over each fromIntegral $ V2 (buf^.width) (buf^.height)
     mSlotSize  = fitSlotSize maxTexSize =<< maximumOf traverse texSize
+
+updateSSEC :: Int -> SlotSize -> TextureAtlasStats -> TextureAtlasStats
+updateSSEC pageNum slotSize tas = tas & pageSSEC.ix pageNum +~ (ss*ss)
+    where
+    ss = div (fromSlotSize slotSize) 8
+
+prettyPrintSSEC :: MonadIO m => TextureAtlas -> m ()
+prettyPrintSSEC atlas = do
+    tas <- readIORef (atlas^.stats)
+    let maxSlotsCount = 512*512 -- maxSlotSize/8 ^2
+    let ls = zip [0..] $ toList $ tas^.pageSSEC
+    forM_ ls $ \(i, c) -> when (c > 0) $ printPageSSEC i c maxSlotsCount
+
+printPageSSEC :: MonadIO m => Int -> Int -> Int -> m ()
+printPageSSEC i c m = putStrLn $ printf "%2d: %6d/%6d (%5.1f%%)" i c m pct
+    where pct = (fromIntegral c / fromIntegral m) * 100 :: Float
 
 logOnceFor :: MonadIO m => a -> Text -> m ()
 logOnceFor _what msg = putTextLn msg

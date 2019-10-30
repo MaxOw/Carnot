@@ -248,18 +248,19 @@ pixelsToPoints :: Float -> Int
 pixelsToPoints = floor . (*64)
 
 makeRenderText :: BoxAlign -> FontStyle -> Text -> Engine us RenderAction
-makeRenderText align fs text = snd <$> makeRenderTextLine align fs text
+makeRenderText align fs text = snd <$> makeRenderTextLine True align fs text
 
 makeRenderTextLine
-    :: BoxAlign -> FontStyle -> Text -> Engine us (TextLineDesc, RenderAction)
-makeRenderTextLine align fs text = do
+    :: Bool -> BoxAlign -> FontStyle -> Text
+    -> Engine us (TextLineDesc, RenderAction)
+makeRenderTextLine withCache align fs text = do
     fh  <- retriveHierarchy fs
     case getPrimaryFont (fh^.fonts) (fs^.bold) (fs^.italic) of
         Just f -> do
             m   <- getFontMetrics f (fs^.fontSize)
             dws <- mapM (toDrawCharList fh . toString) $ words text
             let s = fmap pointsToPixels $ Size (calcWidth m dws) (m^.lineHeight)
-            let shouldCache = Text.length text > 1
+            let shouldCache = Text.length text > 1 && withCache
             let renderText
                      = transformBoxAlign s align $ vertOff m
                      $ renderComposition $ concat $ go shouldCache m 0 dws

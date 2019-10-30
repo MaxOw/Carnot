@@ -3,7 +3,8 @@
 {-# Language GeneralizedNewtypeDeriving #-}
 module Engine.Layout.Alt
     ( Layout
-    , fillColor, fillColorA, composition, textline
+    , fillColor, fillColorA, composition
+    , textline, textlineNoCache
     , space, container
     , makeRenderLayout, drawLayout
 
@@ -121,10 +122,16 @@ data WordRequest = WordRequest
 instance Hashable WordRequest
 
 data TextRequest = TextRequest
-   { field_justify :: Bool
-   , field_content :: [WordRequest]
+   { field_justify   :: Bool
+   , field_content   :: [WordRequest]
+   , field_withCache :: Bool
    } deriving (Generic)
-instance Default TextRequest
+instance Default TextRequest where
+    def = TextRequest
+        { field_justify   = False
+        , field_content   = []
+        , field_withCache = True
+        }
 instance Hashable TextRequest
 
 data TextResult = TextResult
@@ -201,6 +208,11 @@ textline :: FontStyle -> Text -> Layout
 textline fs t = simplePrimitive $ Primitive_Text $ def
     & ff#content .~ [WordRequest fs t]
 
+textlineNoCache :: FontStyle -> Text -> Layout
+textlineNoCache fs t = simplePrimitive $ Primitive_Text $ def
+    & ff#content   .~ [WordRequest fs t]
+    & ff#withCache .~ False
+
 container :: Layout -> Layout
 container = composition . (:[])
 
@@ -227,18 +239,16 @@ distributePx full ls
 resolveLayout :: Layout -> Engine us LayoutResult
 resolveLayout = go
     where
-    renderTextRequest r = do
-        (desc, rend) <- makeRenderTextLine MiddleLeft
+    renderTextRequest c r = do
+        (desc, rend) <- makeRenderTextLine c MiddleLeft
             (r^.ff#fontStyle) (r^.ff#content)
         return $ TextResult
             (fmap Pixels $ desc^.size) (Pixels $ desc^.minSpaceAdvance) rend
 
-    renderTextPrimitive x ts = renderTextWords x (ts^.justify) (ts^.content)
-
-    renderTextWords _ _ [ ] = return def
-    renderTextWords x _ [a] = reset x . Primitive_Text =<< renderTextRequest a
-    renderTextWords x j tts = do
-        rts <- mapM renderTextRequest tts
+    renderTextWords _ _ _ [ ] = return def
+    renderTextWords x c _ [a] = reset x . Primitive_Text =<< renderTextRequest c a
+    renderTextWords x c j tts = do
+        rts <- mapM (renderTextRequest c) tts
         let spaceSize     = fromMaybe 0 $ maximumOf (traverse.minSpaceAdvance) rts
         let maxLineHeight = fromMaybe 0 $ maximumOf (traverse.size.height) rts
         let opts = def
@@ -250,6 +260,9 @@ resolveLayout = go
         let rs = map (\r -> (r^.size.width, def & primitive .~ Primitive_Text r)) rts
         let p = flex opts rs
         reset x (p^.primitive)
+
+    renderTextPrimitive x ts =
+        renderTextWords x (ts^.ff#withCache) (ts^.justify) (ts^.content)
 
     go x = case x^.primitive of
         Primitive_FillColor   cl -> reset x $ Primitive_FillColor cl

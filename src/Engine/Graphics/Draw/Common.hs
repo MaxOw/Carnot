@@ -21,7 +21,7 @@ makeInitDrawCall vertexShader fragmentShader = do
     vao     <- glCreateVertexArray
     let cs = sizeOfProxied (Proxy :: Proxy i)
     let maxBatchSize = div (5*1024*1024) (cs*4)
-    putStrLn $ "maxBatchSize: " <> show maxBatchSize
+    -- putStrLn $ "maxBatchSize: " <> show maxBatchSize
     let vs = concat $ replicate maxBatchSize $ concatMap toList defVertices
     let is = concatMap makeIndices [0 .. fromIntegral $ maxBatchSize-1]
     verticesBuffer <- createBuffer GL_ARRAY_BUFFER (vs :: [Float])

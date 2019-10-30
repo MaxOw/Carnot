@@ -10,6 +10,7 @@ import Data.HashMap.Strict (HashMap)
 import Data.IORef (IORef)
 import Control.Concurrent.STM.TChan (TChan)
 import Graphics.GL (GLint)
+import Engine.Lens.Utils
 
 import Engine.Backend.Types
 import Engine.Graphics.TaskManager (TaskManager)
@@ -68,16 +69,28 @@ emptyAtlasLocation = AtlasLocation
 data AtlasTask
    = TaskAddTexture AtlasLocation TextureBuffer
 
+data TextureAtlasStats = TextureAtlasStats
+   { field_pageSSEC :: Vector Int
+     -- ^ Smallest Slot Equivalent Count (for a rough est. of page use pct)
+   } deriving (Generic)
+
 data TextureAtlas  = TextureAtlas
-   { field_maxTextureUnits :: GLint
-   , field_maxTextureSize  :: GLint
+   { field_maxTextureUnits :: Int32
+   , field_maxTextureSize  :: Int32
    , field_atlasMap        :: IORef (HashMap Texture AtlasLocation)
-   , field_primaryPages    :: IORef AtlasPages
+   , field_primaryPages    :: IORef (Vector AtlasPage)
    -- , field_secondaryPages  :: IORef AtlasPages
    , field_customPages     :: IORef (Vector TextureBuffer)
+   , field_stats           :: IORef TextureAtlasStats
    , field_tasks           :: TChan AtlasTask
    , field_taskManager     :: TaskManager
    } deriving (Generic)
+
+stats :: Lens' TextureAtlas (IORef TextureAtlasStats)
+stats = ff#stats
+
+pageSSEC :: Lens' TextureAtlasStats (Vector Int)
+pageSSEC = ff#pageSSEC
 
 newtype PageId = PageId { unPageId :: Int }
 makeWrapped ''PageId

@@ -58,26 +58,36 @@ new conf = do
 type RenderCallback u = BBox Float -> Engine u RenderAction
 update
     :: Scroller
+    -> Bool -- update full render region
     -> V2 Float -- ^ Position
     -> RenderCallback u
     -> Engine u ()
-update sr@(Scroller ref) pos renderInBBox = do
+update sr@(Scroller ref) updateFullRR pos renderInBBox = do
     s <- readIORef ref
-    rr <- extd <$> getRenderRegion pos (s^.config)
-    let BBox (V2 mx my) (V2 xx xy) = rr
-    let allInRR = Set.fromList $ V2 <$> [mx .. xx] <*> [my .. xy]
-    let validInRR = cellsInRange rr $ s^.ff#validCells
-    let missing = Set.difference allInRR $ Set.fromList
-                $ map field_cellPosition validInRR
+    let conf = s^.config
+    rr <- getRenderRegion pos conf
+    let err = extd rr
+    let prioritySet = bboxCellsSet rr
+    let allInRR = bboxCellsSet err
+    let validInRR = Set.fromList $ map field_cellPosition
+                  $ cellsInRange err $ s^.ff#validCells
+    let missing = Set.difference allInRR validInRR
+    let priority = Set.intersection prioritySet missing
     let fc = length $ s^.ff#freedCells
     let diff = Set.size missing - fc
     when (not $ Set.null missing) $ do
         when (diff > 0) $ gc sr pos diff
-        drawMissing sr pos missing renderInBBox
+        if updateFullRR && not (Set.null priority)
+        then forM_ (Set.toList priority) $ drawOneCell sr renderInBBox pos
+        else do
+            let ls = sortOn (distToCell conf pos) $ Set.toList missing
+            whenNotNull ls $ drawOneCell sr renderInBBox pos . head
 
     modifyIORef' ref $ set position pos
     where
 
+    bboxCellsSet (BBox (V2 mx my) (V2 xx xy))
+        = Set.fromList $ V2 <$> [mx .. xx] <*> [my .. xy]
     extd (BBox m x) = BBox (pred <$> m) (succ <$> x)
 
 cellsInRange :: BBox Int -> [ScrollerCell] -> [ScrollerCell]
@@ -96,19 +106,19 @@ getRenderRegion pos conf = do
     let grig = toCell $ pos^._x + w
     return $ BBox (V2 glef gbot) (V2 grig gtop)
 
-drawMissing
+drawOneCell
     :: Scroller
-    -> V2 Float -- ^ Position
-    -> Set (V2 Int) -- ^ Missing cells
     -> RenderCallback u
+    -> V2 Float -- ^ Position
+    -> V2 Int   -- ^ Cell to draw
     -> Engine u ()
-drawMissing sr@(Scroller ref) pos missing renderInBBox = do
+drawOneCell sr@(Scroller ref) renderInBBox pos cellToDraw = do
     s <- readIORef ref
     let conf = s^.config
-    let ls = sortOn (distToCell conf pos) $ Set.toList missing
     let fs = s^.ff#freedCells
     -- just draw one for now
-    whenJust ((,) <$> viaNonEmpty head ls <*> viaNonEmpty head fs) $ \(m, v) -> do
+    whenJust (viaNonEmpty head fs) $ \v -> do
+        let m  = cellToDraw
         let vv = v & ff#cellPosition .~ m
         -- print m
         let buf       = s^.buffer
