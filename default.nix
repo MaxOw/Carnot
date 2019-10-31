@@ -1,35 +1,33 @@
-# { nixpkgs ? import <nixpkgs> {}, compiler ? "ghc843" }:
-{ nixpkgs ? import <nixpkgs> {}, compiler ? "ghc865" }:
-let ghc = nixpkgs.haskell.packages.${compiler}.override {
+let
+  bootstrap = import <nixpkgs> {};
+  nixpkgs_json = builtins.fromJSON (builtins.readFile ./nix/nixpkgs.json);
+  src = bootstrap.fetchFromGitHub {
+    owner = "NixOS";
+    repo  = "nixpkgs";
+    inherit (nixpkgs_json) rev sha256;
+  };
+  pkgs = import src {};
+
+  compiler = "ghc865";
+  ghc = pkgs.haskell.packages.${compiler}.override {
       overrides = self: super: {
-        # TODO: get packages from github
-        # generic-lens-labels = loadLocal self "generic-lens-labels";
-        # named               = loadLocal self "named";
-        # freetype-simple       = loadLocal self "freetype-simple";
-        reload-utils = loadDirec self "${./../reload-utils}";
       };
     };
+  tools = with ghc; [ cabal-install ghcid ];
 
-    overrideDeriv = drv: f: drv.override (args: args // {
-      mkDerivation = drv: args.mkDerivation (drv // f drv);
+  overrideCabal = pkg: pkgs.haskell.lib.overrideCabal pkg
+    ({buildDepends ? [], ...}: {
+      buildDepends = buildDepends ++ tools;
     });
-    dontCheck = drv: overrideDeriv drv (drv: { doCheck = false; });
+  cabal2nixResult = url: pkgs.runCommand "cabal2nixResult" {
+    buildCommand = ''
+      cabal2nix --no-check --jailbreak --no-haddock ${url} > $out
+    '';
+    buildInputs = [ pkgs.cabal2nix ];
+  } "";
+  cabal2nixResultLocal = path: cabal2nixResult "file://${path}";
+  package = ghc.callPackage (cabal2nixResultLocal ./.) {};
+  drv = overrideCabal package;
 
-    loadLocal = self: name:
-      self.callPackage (cabal2nixResult (./deps + "/${name}")) {};
-    loadDirec = self: name:
-      self.callPackage (cabal2nixResult (name)) {};
-    tools = with ghc; [ cabal-install ghcid ];
-    overrideCabal = pkg: nixpkgs.haskell.lib.overrideCabal pkg
-      ({buildDepends ? [], ...}: {
-        buildDepends = buildDepends ++ tools;
-      });
-    cabal2nixResult = src: nixpkgs.runCommand "cabal2nixResult" {
-      buildCommand = ''
-        cabal2nix --no-check --jailbreak --no-haddock file://${src} > $out
-      '';
-      buildInputs = [ nixpkgs.cabal2nix ];
-    } "";
-    package = ghc.callPackage (cabal2nixResult ./.) { };
-    drv = overrideCabal package;
-in if nixpkgs.lib.inNixShell then drv.env else drv
+in if pkgs.lib.inNixShell then drv.env else drv
+

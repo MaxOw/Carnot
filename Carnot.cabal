@@ -208,9 +208,6 @@ library
                 , QuickCheck
                 , tree-diff
 
-                , reload-utils
-
-
 executable Carnot
   if !flag(build-example)
     buildable:      False
@@ -303,8 +300,6 @@ executable Carnot
                 , criterion-measurement
                 , weigh
 
-                , reload-utils
-
                 , tasty
                 , tasty-hunit
                 , tasty-golden
@@ -314,7 +309,6 @@ executable Carnot
                 , smallcheck
                 , QuickCheck
                 , tree-diff
-
 
 executable benchmark
   if !flag(build-benchmark)
