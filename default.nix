@@ -1,3 +1,4 @@
+{ enableProfiling ? true }:
 let
   bootstrap = import <nixpkgs> {};
   nixpkgs_json = builtins.fromJSON (builtins.readFile ./nix/nixpkgs.json);
@@ -18,6 +19,7 @@ let
   overrideCabal = pkg: pkgs.haskell.lib.overrideCabal pkg
     ({buildDepends ? [], ...}: {
       buildDepends = buildDepends ++ tools;
+      enableLibraryProfiling = enableProfiling;
     });
   cabal2nixResult = url: pkgs.runCommand "cabal2nixResult" {
     buildCommand = ''

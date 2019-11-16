@@ -19,7 +19,7 @@ jobs:
 
       - run:
           name: Build
-          command: nix-build
+          command: nix-build --arg enableProfiling false
 
     # - save_cache:
     #     key: carnot-cache
