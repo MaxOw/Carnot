@@ -19,7 +19,7 @@ jobs:
 
       - run:
           name: Build
-          command: nix-shell --run "cabal configure; cabal build"
+          command: nix-build
 
     # - save_cache:
     #     key: carnot-cache
