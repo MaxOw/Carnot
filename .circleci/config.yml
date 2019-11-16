@@ -1,0 +1,26 @@
+
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: nixos/nix:2.3
+    steps:
+      - checkout
+      - restore_cache:
+          key: carnot-cache-{{ .Branch }}
+
+      - run:
+          name: Build
+          command: |
+            nix-shell --pure
+            cabal configure
+            cabal build
+            nix-collect-garbage -d
+            exit
+
+      - save_cache:
+          key: carnot-cache-{{ .Branch }}
+          when: always
+          paths:
+            - /nix/store
