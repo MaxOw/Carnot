@@ -1,0 +1,28 @@
+
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: nixos/nix:2.3
+    steps:
+      - checkout
+
+    # - run:
+    #     name: Fix TLS
+    #     command: |
+    #       mkdir -p /etc/ssl/certs
+    #       ln -s $NIX_SSL_CERT_FILE /etc/ssl/certs/ca-certificates.crt
+
+    # - restore_cache:
+    #     key: carnot-cache
+
+      - run:
+          name: Build
+          command: nix-build --arg enableProfiling false
+
+    # - save_cache:
+    #     key: carnot-cache
+    #     when: always
+    #     paths:
+    #       - /nix/store

@@ -1,3 +1,4 @@
+[![CircleCI][circleci-badge]][circleci-buildlog]
 
 # Carnot
 
@@ -16,3 +17,5 @@ restrictions. If you mention me as an author that's nice, if not tough luck.
 So basically MIT, BSD3, CC0, choose what you like.
 
 [github-runslayer]: https://github.com/MaxOw/RuneSlayer
+[circleci-badge]: https://circleci.com/gh/MaxOw/Carnot.svg?style=svg
+[circleci-buildlog]: https://circleci.com/gh/MaxOw/Carnot
