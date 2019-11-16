@@ -13,11 +13,8 @@ jobs:
       - run:
           name: Build
           command: |
-            nix-shell --pure
-            cabal configure
-            cabal build
-            nix-collect-garbage -d
-            exit
+            nix-shell --pure \
+              --run "cabal configure; cabal build; nix-collect-garbage -d"
 
       - save_cache:
           key: carnot-cache-{{ .Branch }}
