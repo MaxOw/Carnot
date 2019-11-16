@@ -7,17 +7,23 @@ jobs:
       - image: nixos/nix:2.3
     steps:
       - checkout
+
+      - run:
+          name: Fix TLS
+          command: |
+            mkdir -p /etc/ssl/certs
+            ln -s $NIX_SSL_CERT_FILE /etc/ssl/certs/ca-certificates.crt
+
       - restore_cache:
-          key: carnot-cache-{{ .Branch }}
+          key: carnot-cache
 
       - run:
           name: Build
           command: |
-            nix-shell --pure \
-              --run "cabal configure; cabal build; nix-collect-garbage -d"
+            nix-shell --run "cabal configure; cabal build; nix-collect-garbage -d"
 
       - save_cache:
-          key: carnot-cache-{{ .Branch }}
+          key: carnot-cache
           when: always
           paths:
             - /nix/store
