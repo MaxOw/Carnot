@@ -15,7 +15,7 @@ import Prelude (String)
 import Data.Maybe (fromJust)
 import Control.Monad.IO.Class (MonadIO(..))
 import qualified Graphics.UI.GLFW as GLFW
-import Text.Printf
+-- import Text.Printf
 import System.IO (stdout, hPutStrLn)
 
 type Context = GLFW.Window

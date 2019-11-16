@@ -11,7 +11,6 @@ import Data.Hashable
 import Graphics.Rendering.FreeType.Internal.PrimitiveTypes
 import Graphics.Rendering.FreeType.Internal.Face (FT_Face)
 import Graphics.Rendering.FreeType.Internal.Library (FT_Library)
-import Data.Colour.SRGB
 
 import Engine.Backend.Types (TextureBuffer)
 

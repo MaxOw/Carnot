@@ -41,7 +41,7 @@ import Control.Lens
 
 import Data.Hashable (hash)
 import Engine.FontsManager.Types (FontStyle, makeFontStyle)
-import Engine.Context (getFramebufferSize, getTime)
+import Engine.Context (getFramebufferSize)
 import Engine.Types (Engine, graphics)
 -- import Engine.FontsManager.Types
 import Engine.Graphics.Types
@@ -170,8 +170,11 @@ instance Hashable a => Hashable (LayoutT a)
 type Layout       = LayoutT TextRequest
 type LayoutResult = LayoutT TextResult
 
-instance Semigroup Layout where sconcat = composition . toList
-instance Monoid    Layout where mempty  = def
+instance Semigroup Layout where
+    a <> b  = composition [a, b]
+    sconcat = composition . toList
+
+instance Monoid Layout where mempty = def
 
 instance Default (LayoutT a) where
     def = Layout

@@ -58,7 +58,6 @@ import qualified Data.Text as Text
 -- import qualified Data.Vector.Mutable as M
 import Graphics.GL
 import qualified Graphics.UI.GLFW as GLFW
-import Data.Vector (Vector)
 import Data.Hashable
 
 import Diagrams.Core (InSpace, Transformable)
@@ -73,7 +72,6 @@ import Engine.FontsManager
 import Engine.Layout.Types
 
 import Engine.Graphics.RenderAction
-import Engine.Graphics.TextureAtlas (TextureAtlas)
 import qualified Engine.Graphics.TextureAtlas as Atlas
 import qualified Engine.Context as Context
 import Engine.Types
@@ -87,9 +85,6 @@ import qualified Data.GrowVector as G
 import qualified Engine.Graphics.TaskManager as TaskManager
 import qualified Engine.Graphics.TextureCache as TextureCache
 import qualified Engine.Graphics.DrawBatchCache as DrawBatchCache
-
-import qualified Data.Colour as Color
-import qualified Data.Colour.Names as Color
 
 --------------------------------------------------------------------------------
 
@@ -281,10 +276,10 @@ makeRenderTextLine withCache align fs text = do
         Nothing -> return (def, mempty)
     where
     cacheText tch ts key mcol ra = do
-        batchAsync <- getBatchAndPrepIO
-        drawBatchOpts <- getDrawBatchOptsIO
-        TextureCache.retriveOrAdd tch ts key mcol (batchAsync ra)
-            $ drawBatchOpts False
+        batchAsyncIO <- getBatchAndPrepIO
+        drawBatchOptsIO <- getDrawBatchOptsIO
+        TextureCache.retriveOrAdd tch ts key mcol (batchAsyncIO ra)
+            $ drawBatchOptsIO False
     vertOffPx m = pointsToPixels $ m^.verticalOffset
     vertOff m = T.translateY (negate $ vertOffPx m)
     toDrawCharList fh = fmap catMaybes . mapM (makeDrawCharStep fh)

@@ -91,8 +91,8 @@ library
         Engine.Graphics.DrawBatchCache
         Engine.Graphics.DrawBatchCache.Types
         Engine.Graphics.TaskManager
-        Engine.Graphics.Scroller
-        Engine.Graphics.Scroller.Types
+        -- Engine.Graphics.Scroller
+        -- Engine.Graphics.Scroller.Types
         Engine.Graphics.Scroller.Cells
         Engine.Graphics.Scroller.TypesCells
         -- Engine.Graphics.Draw.Atlas
@@ -128,9 +128,9 @@ library
         Data.Collider
         Data.Collider.Types
 
-        Benchmarks
-        Benchmarks.GridIndex
-        Benchmarks.KDTree
+        -- Benchmarks
+        -- Benchmarks.GridIndex
+        -- Benchmarks.KDTree
 
         Tests.Utils
         Tests.QuadTree
@@ -142,13 +142,13 @@ library
         Delude
         -- Main
 
-        Experiments.Baseline
-        Experiments.Draw01
-        Experiments.Draw02
-        Experiments.Draw03
-        Experiments.Draw04
-        Experiments.Current
-        Experiments.Common
+        -- Experiments.Baseline
+        -- Experiments.Draw01
+        -- Experiments.Draw02
+        -- Experiments.Draw03
+        -- Experiments.Draw04
+        -- Experiments.Current
+        -- Experiments.Common
 
         Data.GrowVector
         Data.ZMap

@@ -9,7 +9,6 @@ import Data.Vector (Vector)
 import Data.HashMap.Strict (HashMap)
 import Data.IORef (IORef)
 import Control.Concurrent.STM.TChan (TChan)
-import Graphics.GL (GLint)
 import Engine.Lens.Utils
 
 import Engine.Backend.Types

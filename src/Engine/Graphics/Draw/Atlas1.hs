@@ -8,8 +8,6 @@ module Engine.Graphics.Draw.Atlas1
 import Delude
 import Linear
 import Prelude as String (unlines)
-import Foreign (nullPtr)
-import Data.List.Split (chunksOf)
 import Data.Vector (Vector)
 
 import qualified Data.Vector.Storable as Storable
@@ -25,7 +23,6 @@ import Engine.Common.Types
 import Engine.Graphics.Utils
 import Engine.Graphics.TextureAtlas
 import Engine.Graphics.Buffer
-import Engine.Graphics.Types
 
 import Engine.Graphics.Draw.Common (makeInitDrawCall)
 
@@ -34,8 +31,8 @@ import Engine.Graphics.Draw.Common (makeInitDrawCall)
 unsafeSortZ
     :: Vector (AtlasLocation, AtlasDesc)
     -> IO (Vector (AtlasLocation, AtlasDesc))
-unsafeSortZ i = do
-    v <- Vector.unsafeThaw i
+unsafeSortZ vv = do
+    v <- Vector.unsafeThaw vv
     let f (_, a) = a^.zindex
     let e = 0 :: Word32
     M.sortBy (M.passes e) (M.size e) (\i a -> M.radix i (f a)) v

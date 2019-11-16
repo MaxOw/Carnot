@@ -17,10 +17,8 @@ import Engine.Types (Engine, graphics)
 import Engine.Common.Types
 import Engine.Context (getFramebufferSize)
 import Engine.Graphics (RenderAction)
-import Engine.Graphics.TextureAtlas
-    (TextureAtlas, assignCustomPage, swapCustomPage)
+import Engine.Graphics.TextureAtlas (assignCustomPage)
 import Engine.Lens.Utils
-import Engine.Graphics.Utils
 import Engine.Graphics
 import Diagrams.TwoD.Transform (translate, scaleX, scaleY)
 
@@ -35,12 +33,12 @@ new conf = do
     -- putStrLn $ "GL_MAX_TEXTURE_SIZE: " <> show maxTexSize
     buf <- createTextureBuffer maxTexSize maxTexSize nullPtr
     let cs = conf^.ff#cellSize
-    let cc = div maxTexSize (conf^.ff#cellSize)
+    let ms = div maxTexSize (conf^.ff#cellSize)
     atlas <- use $ graphics.textureAtlas
     pid <- assignCustomPage atlas buf
     fmap Scroller . newIORef $ ScrollerState
         { field_buffer     = buf
-        , field_freedCells = mkCells cs cc
+        , field_freedCells = mkCells cs ms
         , field_validCells = []
         , field_position   = 0
         , field_config     = conf
@@ -78,10 +76,10 @@ update sr@(Scroller ref) updateFullRR pos renderInBBox = do
     when (not $ Set.null missing) $ do
         when (diff > 0) $ gc sr pos diff
         if updateFullRR && not (Set.null priority)
-        then forM_ (Set.toList priority) $ drawOneCell sr renderInBBox pos
+        then forM_ (Set.toList priority) $ drawOneCell sr renderInBBox
         else do
             let ls = sortOn (distToCell conf pos) $ Set.toList missing
-            whenNotNull ls $ drawOneCell sr renderInBBox pos . head
+            whenNotNull ls $ drawOneCell sr renderInBBox . head
 
     modifyIORef' ref $ set position pos
     where
@@ -109,12 +107,10 @@ getRenderRegion pos conf = do
 drawOneCell
     :: Scroller
     -> RenderCallback u
-    -> V2 Float -- ^ Position
     -> V2 Int   -- ^ Cell to draw
     -> Engine u ()
-drawOneCell sr@(Scroller ref) renderInBBox pos cellToDraw = do
+drawOneCell (Scroller ref) renderInBBox cellToDraw = do
     s <- readIORef ref
-    let conf = s^.config
     let fs = s^.ff#freedCells
     -- just draw one for now
     whenJust (viaNonEmpty head fs) $ \v -> do
@@ -157,7 +153,7 @@ distToCell conf pos c = distance pos cpos
     ss = conf^.ff#scale
 
 gc :: MonadIO m => Scroller -> V2 Float -> Int -> m ()
-gc sr@(Scroller ref) pos count = do
+gc (Scroller ref) pos count = do
     -- putStrLn "Scroller GC"
     s <- readIORef ref
     let conf = s^.config
@@ -179,7 +175,7 @@ makeRA s = do
     where
     conf      = s^.config
     cellSize  = fromIntegral $ conf^.ff#cellSize
-    viewScale = conf^.ff#scale
+    -- viewScale = conf^.ff#scale
     cscale    = cellSize :: Float --  / viewScale
 
     renderCell c = renderFromAtlas $ def

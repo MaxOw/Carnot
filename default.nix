@@ -15,11 +15,13 @@ let
       };
     };
   tools = with ghc; [ cabal-install ghcid ];
+  flags = [ "--ghc-option=-Werror" ];
 
   overrideCabal = pkg: pkgs.haskell.lib.overrideCabal pkg
-    ({buildDepends ? [], ...}: {
+    ({buildDepends ? [], configureFlags ? [], ...}: {
       buildDepends = buildDepends ++ tools;
       enableLibraryProfiling = enableProfiling;
+      configureFlags = configureFlags ++ flags;
     });
   cabal2nixResult = url: pkgs.runCommand "cabal2nixResult" {
     buildCommand = ''

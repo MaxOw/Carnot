@@ -26,7 +26,6 @@ import Graphics.GL
 import Engine.Graphics.Utils
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Vector as Vector
-import Control.Concurrent.STM.TChan (TChan)
 import qualified Control.Concurrent.STM.TChan as STM
 
 import Engine.Graphics.TextureAtlas.Types
@@ -153,7 +152,7 @@ new tm = do
     custom <- newIORef Vector.empty
     let maxPagesCount = fromIntegral maxTexUnits
     statsRef <- newIORef $ TextureAtlasStats $ Vector.replicate maxPagesCount 0
-    tasksChan <- newTChanIO
+    tasksChan <- liftIO STM.newTChanIO
     return TextureAtlas
         { field_maxTextureUnits = maxTexUnits
         , field_maxTextureSize  = maxTexSize
@@ -387,16 +386,5 @@ copyAtOffset pos source target = do
         -}
 
 fullUpdate :: MonadIO m => TextureAtlas -> m ()
-fullUpdate atlas = return () -- incrementalUpdate atlas (return False)
-
---------------------------------------------------------------------------------
-
-newTChanIO :: MonadIO m => m (TChan a)
-newTChanIO = liftIO STM.newTChanIO
-
-writeTChanIO :: MonadIO m => TChan a -> a -> m ()
-writeTChanIO chan = liftIO . atomically . STM.writeTChan chan
-
-tryReadTChanIO :: MonadIO m => TChan a -> m (Maybe a)
-tryReadTChanIO = liftIO . atomically . STM.tryReadTChan
+fullUpdate _atlas = return () -- incrementalUpdate atlas (return False)
 

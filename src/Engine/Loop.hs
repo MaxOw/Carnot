@@ -5,8 +5,6 @@ import Control.Monad.Catch (finally)
 import Control.Concurrent (threadDelay)
 import Control.Lens hiding (Context)
 
-import System.Mem
-
 import Engine.Types
 import Engine.Events
 import Engine.Context

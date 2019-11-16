@@ -104,8 +104,8 @@ runSt :: St -> IO ()
 runSt st = do
     let cx = field_context st
     withBuffers cx $ do
-        let projM = field_projMat st
-        es <- batchRenderAction (st^.ff#elems)
+        -- let projM = field_projMat st
+        -- es <- batchRenderAction (st^.ff#elems)
         -- (st^.ff#draw) projM es
         return ()
 

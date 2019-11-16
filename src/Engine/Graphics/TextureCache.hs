@@ -18,8 +18,6 @@ import Engine.Graphics.RenderAction
 import Engine.Lens.Utils
 
 import Engine.Graphics.TextureCache.Types
-import qualified Data.Colour.Names as Color
-import qualified Data.Colour as Color
 import qualified Engine.Graphics.TaskManager as TaskManager
 import Engine.Graphics.TaskManager (TaskManager)
 
@@ -45,12 +43,12 @@ retriveOrAdd :: MonadIO m
 retriveOrAdd cache ss@(Size sw sh) hid mCol batchAsync drawToCache = do
     cmap <- readIORef $ cache^.ff#cache
     case IntMap.lookup hid cmap of
-        Nothing -> addToCache hid
+        Nothing -> addToCache
         Just tx -> lookupAtlasLocation (cache^.ff#atlas) tx >>= \case
-            Nothing -> addToCache hid -- TODO: don't redraw, just re-add to atlas
+            Nothing -> addToCache -- TODO: don't redraw, just re-add to atlas
             Just _l -> return $ makeRenderAction tx
     where
-    addToCache hid = do
+    addToCache = do
         buf <- createTextureBuffer sw sh nullPtr
         let projM = orthoProjectionFor (fmap realToFrac ss) $ def
                 & boxAlign .~ MiddleLeft

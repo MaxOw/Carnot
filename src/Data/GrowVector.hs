@@ -13,9 +13,10 @@ module Data.GrowVector
     ) where
 
 import Relude hiding (length, toList, sortBy)
+import Data.Proxied (proxied)
 import qualified Data.Foldable as F
-import Control.Exception (bracket_)
-import Control.Concurrent.QSem
+-- import Control.Exception (bracket_)
+-- import Control.Concurrent.QSem
 import Data.Vector (Vector)
 import Data.Vector.Mutable (IOVector)
 import qualified Data.Vector.Mutable as M
@@ -28,11 +29,11 @@ import qualified Data.Vector as V
 data GrowVector a = GrowVector
    { field_vector :: IORef (IOVector a)
    , field_size   :: IORef Int
-   , field_lock   :: QSem
+   -- , field_lock   :: QSem
    } -- deriving (Generic)
 
 withLock :: GrowVector a -> IO b -> IO b
-withLock gv = id
+withLock _gv = id
 {-
 withLock gv = bracket_ (waitQSem s) (signalQSem s)
     where
@@ -43,7 +44,7 @@ new :: IO (GrowVector a)
 new = GrowVector
     <$> (newIORef =<< M.new 256)
     <*> newIORef 0
-    <*> newQSem 1
+    -- <*> newQSem 1
 
 clear :: GrowVector a -> IO ()
 clear gv = withLock gv $ do
@@ -74,8 +75,8 @@ sortBy f gv = do
     v <- readIORef (field_vector gv)
     s <- readIORef (field_size gv)
     let sv = M.take s v
-    let e = undefined :: e
-    M.sortBy (M.passes e) (M.size e) (\i a -> M.radix i (f a)) sv
+    let e = Proxy @e
+    M.sortBy (proxied M.passes e) (proxied M.size e) (\i a -> M.radix i (f a)) sv
 
 toVector :: GrowVector a -> IO (Vector a)
 toVector gv = withLock gv $ do

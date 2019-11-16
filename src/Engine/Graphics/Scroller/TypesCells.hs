@@ -2,7 +2,6 @@ module Engine.Graphics.Scroller.TypesCells where
 
 import Delude
 import Engine.Backend.Types (TextureBuffer)
-import Engine.Common.Types (Size)
 import Engine.Graphics.TextureAtlas.Types (PageId)
 import Engine.Lens.Utils
 
