@@ -8,22 +8,21 @@ jobs:
     steps:
       - checkout
 
-      - run:
-          name: Fix TLS
-          command: |
-            mkdir -p /etc/ssl/certs
-            ln -s $NIX_SSL_CERT_FILE /etc/ssl/certs/ca-certificates.crt
+    # - run:
+    #     name: Fix TLS
+    #     command: |
+    #       mkdir -p /etc/ssl/certs
+    #       ln -s $NIX_SSL_CERT_FILE /etc/ssl/certs/ca-certificates.crt
 
-      - restore_cache:
-          key: carnot-cache
+    # - restore_cache:
+    #     key: carnot-cache
 
       - run:
           name: Build
-          command: |
-            nix-shell --run "cabal configure; cabal build; nix-collect-garbage -d"
+          command: nix-shell --run "cabal configure; cabal build"
 
-      - save_cache:
-          key: carnot-cache
-          when: always
-          paths:
-            - /nix/store
+    # - save_cache:
+    #     key: carnot-cache
+    #     when: always
+    #     paths:
+    #       - /nix/store
