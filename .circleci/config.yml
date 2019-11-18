@@ -23,7 +23,12 @@ jobs:
 
       - run:
           name: Build
-          command: nix-build --arg enableProfiling false | cachix push carnot
+          command: |
+              if [ "${CIRCLE_BRANCH}" == "master" ]; then
+                nix-build | cachix push carnot
+              else
+                nix-build --arg enableProfiling false --arg fast true
+              fi
 
     # - save_cache:
     #     key: carnot-cache

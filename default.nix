@@ -1,4 +1,4 @@
-{ enableProfiling ? true }:
+{ enableProfiling ? true, fast ? false }:
 let
   bootstrap = import <nixpkgs> {};
   nixpkgs_json = builtins.fromJSON (builtins.readFile ./nix/nixpkgs.json);
@@ -15,7 +15,8 @@ let
       };
     };
   tools = with ghc; [ cabal-install ghcid ];
-  flags = [ "--ghc-option=-Werror" ];
+  flags = [ "--ghc-option=-Werror" ] ++ if fast
+     then [ "--ghc-option=-O0" ] else [];
 
   overrideCabal = pkg: pkgs.haskell.lib.overrideCabal pkg
     ({buildDepends ? [], configureFlags ? [], ...}: {
