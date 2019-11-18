@@ -18,8 +18,20 @@ jobs:
     #     key: carnot-cache
 
       - run:
+          name: Install Cachix
+          command: |
+              if [ "${CIRCLE_BRANCH}" == "master" ]; then
+                nix-env -iA cachix -f https://cachix.org/api/v1/install
+              fi
+
+      - run:
           name: Build
-          command: nix-build --arg enableProfiling false
+          command: |
+              if [ "${CIRCLE_BRANCH}" == "master" ]; then
+                nix-build | cachix push carnot
+              else
+                nix-build --arg enableProfiling false --arg fast true
+              fi
 
     # - save_cache:
     #     key: carnot-cache
