@@ -15,8 +15,8 @@ let
       };
     };
   tools = with ghc; [ cabal-install ghcid ];
-  flags = [ "--ghc-option=-Werror" ] ++ if fast
-     then [ "--ghc-option=-O0" ] else [];
+  flagsFast = if fast then [ "--ghc-option=-O0" ] else [];
+  flags = [ "--ghc-option=-Werror" ] ++ flagsFast;
 
   overrideCabal = pkg: pkgs.haskell.lib.overrideCabal pkg
     ({buildDepends ? [], configureFlags ? [], ...}: {
