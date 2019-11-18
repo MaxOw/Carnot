@@ -18,8 +18,12 @@ jobs:
     #     key: carnot-cache
 
       - run:
+          name: Install Cachix
+          command: nix-env -iA cachix -f https://cachix.org/api/v1/install
+
+      - run:
           name: Build
-          command: nix-build --arg enableProfiling false
+          command: nix-build --arg enableProfiling false | cachix push carnot
 
     # - save_cache:
     #     key: carnot-cache
